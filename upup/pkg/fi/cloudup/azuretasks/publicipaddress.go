@@ -107,6 +107,9 @@ func (*PublicIPAddress) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Publ
 	}
 
 	p := network.PublicIPAddress{
+		Sku: &network.PublicIPAddressSku{
+			Name: network.PublicIPAddressSkuNameStandard,
+		},
 		Location: to.StringPtr(t.Cloud.Region()),
 		Name:     to.StringPtr(*e.Name),
 		PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{

@@ -1169,12 +1169,6 @@ func setupAPI(opt *NewClusterOptions, cluster *api.Cluster) error {
 	cluster.Spec.API = &api.AccessSpec{}
 	if cluster.Spec.GetCloudProvider() == api.CloudProviderOpenstack {
 		initializeOpenstackAPI(opt, cluster)
-	} else if cluster.Spec.GetCloudProvider() == api.CloudProviderAzure {
-		// Do nothing to disable the use of loadbalancer for the k8s API server.
-		// TODO(kenji): Remove this condition once we support the loadbalancer
-		// in pkg/model/azuremodel/api_loadbalancer.go.
-		cluster.Spec.API = nil
-		return nil
 	} else if opt.APILoadBalancerType != "" || opt.APISSLCertificate != "" {
 		cluster.Spec.API.LoadBalancer = &api.LoadBalancerAccessSpec{}
 	} else {

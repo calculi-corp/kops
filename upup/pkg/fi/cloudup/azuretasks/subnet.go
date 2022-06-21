@@ -18,8 +18,10 @@ package azuretasks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
+	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/klog/v2"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/azure"
@@ -36,6 +38,19 @@ type Subnet struct {
 	CIDR           *string
 	Shared         *bool
 	RouteTable     *string
+}
+
+type RouteTableID struct {
+	SubscriptionID     string
+	ResourceGroupName  string
+	RouteTableName         string
+}
+
+func (r *RouteTableID) String() string {
+	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/routeTables/%s",
+		r.SubscriptionID,
+		r.ResourceGroupName,
+		r.RouteTableName)
 }
 
 var (
@@ -109,12 +124,18 @@ func (*Subnet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Subnet) error
 		klog.Infof("Updating a Subnet with name: %s", fi.StringValue(e.Name))
 	}
 
+	routeTableID := RouteTableID{
+		SubscriptionID:     t.Cloud.SubscriptionID(),
+		ResourceGroupName:  *e.ResourceGroup.Name,
+		RouteTableName:         *e.RouteTable,
+	}
+
 	// TODO(kenji): Be able to specify security groups.
 	subnet := network.Subnet{
 		SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
 			AddressPrefix: e.CIDR,
 			RouteTable: &network.RouteTable{
-				Name: e.RouteTable,
+				ID: to.StringPtr(routeTableID.String()),
 			},
 		},
 	}

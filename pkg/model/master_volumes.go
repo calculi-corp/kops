@@ -369,6 +369,10 @@ func (b *MasterVolumeBuilder) addAzureVolume(
 		tags[k] = fi.String(v)
 	}
 
+	az, err := azure.ZoneToAvailabilityZoneNumber(zone)
+	if err != nil {
+		return
+	}
 	// TODO(kenji): Respect zone and m.EncryptedVolume.
 	t := &azuretasks.Disk{
 		Name:      fi.String(name),
@@ -379,7 +383,7 @@ func (b *MasterVolumeBuilder) addAzureVolume(
 		},
 		SizeGB: fi.Int32(volumeSize),
 		Tags:   tags,
-		Zones: &[]string{zone},
+		Zones:  &[]string{az},
 	}
 	c.AddTask(t)
 }

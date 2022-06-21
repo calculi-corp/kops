@@ -49,6 +49,7 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 			VirtualNetwork: b.LinkToVirtualNetwork(),
 			CIDR:           fi.String(subnetSpec.CIDR),
 			Shared:         fi.Bool(b.Cluster.SharedVPC()),
+			RouteTable:     fi.String(b.NameForRouteTable()),
 		}
 		c.AddTask(subnetTask)
 	}

@@ -35,6 +35,7 @@ type Subnet struct {
 	VirtualNetwork *VirtualNetwork
 	CIDR           *string
 	Shared         *bool
+	RouteTable     *string
 }
 
 var (
@@ -112,6 +113,9 @@ func (*Subnet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Subnet) error
 	subnet := network.Subnet{
 		SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
 			AddressPrefix: e.CIDR,
+			RouteTable: &network.RouteTable{
+				Name: e.RouteTable,
+			},
 		},
 	}
 	return t.Cloud.Subnet().CreateOrUpdate(

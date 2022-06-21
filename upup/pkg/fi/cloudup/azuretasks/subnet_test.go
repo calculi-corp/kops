@@ -40,6 +40,7 @@ func TestSubnetRenderAzure(t *testing.T) {
 			Name: to.StringPtr("vnet"),
 		},
 		CIDR: to.StringPtr("10.0.0.0/8"),
+		RouteTable: to.StringPtr("kops-test"),
 	}
 	if err := subnet.RenderAzure(apiTarget, nil, expected, nil); err != nil {
 		t.Fatalf("unexpected error: %s", err)
@@ -136,6 +137,11 @@ func TestSubnetCheckChanges(t *testing.T) {
 			a:       &Subnet{Name: to.StringPtr("name")},
 			changes: &Subnet{Name: to.StringPtr("newName")},
 			success: false,
+		},
+		{
+			a:       &Subnet{RouteTable: to.StringPtr("kops-test")},
+			changes: &Subnet{RouteTable: to.StringPtr("new-kops-test")},
+			success: true,
 		},
 	}
 	for i, tc := range testCases {

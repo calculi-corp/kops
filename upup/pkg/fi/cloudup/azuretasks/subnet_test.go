@@ -39,7 +39,7 @@ func TestSubnetRenderAzure(t *testing.T) {
 		VirtualNetwork: &VirtualNetwork{
 			Name: to.StringPtr("vnet"),
 		},
-		CIDR: to.StringPtr("10.0.0.0/8"),
+		CIDR:       to.StringPtr("10.0.0.0/8"),
 		RouteTable: to.StringPtr("kops-test"),
 	}
 	if err := subnet.RenderAzure(apiTarget, nil, expected, nil); err != nil {

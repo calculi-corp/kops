@@ -379,6 +379,7 @@ func (b *MasterVolumeBuilder) addAzureVolume(
 		},
 		SizeGB: fi.Int32(volumeSize),
 		Tags:   tags,
+		Zones: &[]string{zone},
 	}
 	c.AddTask(t)
 }

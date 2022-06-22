@@ -24,11 +24,11 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 )
 
-// RouteTablesClient is a client for managing Virtual Networks.
+// RouteTablesClient is a client for managing Route Tables.
 type RouteTablesClient interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName, routeTableName string, parameters network.RouteTable) error
 	List(ctx context.Context, resourceGroupName string) ([]network.RouteTable, error)
-	Delete(ctx context.Context, resourceGroupName, vnetName string) error
+	Delete(ctx context.Context, resourceGroupName, routeTableName string) error
 }
 
 type routeTablesClientImpl struct {
@@ -53,13 +53,13 @@ func (c *routeTablesClientImpl) List(ctx context.Context, resourceGroupName stri
 	return l, nil
 }
 
-func (c *routeTablesClientImpl) Delete(ctx context.Context, resourceGroupName, vnetName string) error {
-	future, err := c.c.Delete(ctx, resourceGroupName, vnetName)
+func (c *routeTablesClientImpl) Delete(ctx context.Context, resourceGroupName, routeTableName string) error {
+	future, err := c.c.Delete(ctx, resourceGroupName, routeTableName)
 	if err != nil {
-		return fmt.Errorf("error deleting virtual network: %s", err)
+		return fmt.Errorf("error deleting route table: %s", err)
 	}
 	if err := future.WaitForCompletionRef(ctx, c.c.Client); err != nil {
-		return fmt.Errorf("error waiting for virtual network deletion completion: %s", err)
+		return fmt.Errorf("error waiting for route table deletion completion: %s", err)
 	}
 	return nil
 }

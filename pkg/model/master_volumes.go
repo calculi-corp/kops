@@ -371,9 +371,10 @@ func (b *MasterVolumeBuilder) addAzureVolume(
 
 	az, err := azure.ZoneToAvailabilityZoneNumber(zone)
 	if err != nil {
+		klog.Error(err)
 		return
 	}
-	// TODO(kenji): Respect zone and m.EncryptedVolume.
+	// TODO(kenji): Respect m.EncryptedVolume.
 	t := &azuretasks.Disk{
 		Name:      fi.String(name),
 		Lifecycle: b.Lifecycle,

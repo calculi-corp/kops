@@ -31,7 +31,7 @@ type NetworkSecurityGroup struct {
 	// Shared is set if this is a shared security group (one we don't create or own)
 	Shared *bool
 
-	Tags map[string]string
+	Tags map[string]*string
 }
 
 func (e *NetworkSecurityGroup) Run(c *fi.Context) error {

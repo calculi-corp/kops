@@ -55,6 +55,8 @@ type AzureCloud interface {
 	NetworkInterface() NetworkInterfacesClient
 	LoadBalancer() LoadBalancersClient
 	PublicIPAddress() PublicIPAddressesClient
+	ApplicationSecurityGroup() ApplicationSecurityGroupClient
+	NetworkSecurityGroup() NetworkSecurityGroupClient
 }
 
 type azureCloudImplementation struct {
@@ -72,6 +74,8 @@ type azureCloudImplementation struct {
 	networkInterfacesClient NetworkInterfacesClient
 	loadBalancersClient     LoadBalancersClient
 	publicIPAddressesClient PublicIPAddressesClient
+	applicationSecurityGroupClient ApplicationSecurityGroupClient
+	networkSecurityGroupClient NetworkSecurityGroupClient
 }
 
 var _ fi.Cloud = &azureCloudImplementation{}
@@ -98,6 +102,8 @@ func NewAzureCloud(subscriptionID, location string, tags map[string]string) (Azu
 		networkInterfacesClient: newNetworkInterfacesClientImpl(subscriptionID, authorizer),
 		loadBalancersClient:     newLoadBalancersClientImpl(subscriptionID, authorizer),
 		publicIPAddressesClient: newPublicIPAddressesClientImpl(subscriptionID, authorizer),
+		applicationSecurityGroupClient: newApplicationSecurityGroupClientImpl(subscriptionID, authorizer),
+		networkSecurityGroupClient: newNetworkSecurityGroupClientImpl(subscriptionID, authorizer),
 	}, nil
 }
 
@@ -300,4 +306,12 @@ func (c *azureCloudImplementation) LoadBalancer() LoadBalancersClient {
 
 func (c *azureCloudImplementation) PublicIPAddress() PublicIPAddressesClient {
 	return c.publicIPAddressesClient
+}
+
+func (c *azureCloudImplementation) ApplicationSecurityGroup() ApplicationSecurityGroupClient {
+	return c.applicationSecurityGroupClient
+}
+
+func (c *azureCloudImplementation) NetworkSecurityGroup() NetworkSecurityGroupClient {
+	return c.networkSecurityGroupClient
 }

@@ -58,6 +58,8 @@ type MockAzureCloud struct {
 	NetworkInterfacesClient *MockNetworkInterfacesClient
 	LoadBalancersClient     *MockLoadBalancersClient
 	PublicIPAddressesClient *MockPublicIPAddressesClient
+	ApplicationSecurityGroupClient *MockApplicationSecurityGroupClient
+	NetworkSecurityGroupClient *MockNetworkSecurityGroupClient
 }
 
 var _ azure.AzureCloud = &MockAzureCloud{}
@@ -98,6 +100,12 @@ func NewMockAzureCloud(location string) *MockAzureCloud {
 		},
 		PublicIPAddressesClient: &MockPublicIPAddressesClient{
 			PubIPs: map[string]network.PublicIPAddress{},
+		},
+		ApplicationSecurityGroupClient: &MockApplicationSecurityGroupClient{
+			ASGs: map[string]network.ApplicationSecurityGroup{},
+		},
+		NetworkSecurityGroupClient: &MockNetworkSecurityGroupClient{
+			NSGs: map[string]network.SecurityGroup{},
 		},
 	}
 }
@@ -228,6 +236,16 @@ func (c *MockAzureCloud) LoadBalancer() azure.LoadBalancersClient {
 // PublicIPAddress returns the public ip address client.
 func (c *MockAzureCloud) PublicIPAddress() azure.PublicIPAddressesClient {
 	return c.PublicIPAddressesClient
+}
+
+// ApplicationSecurityGroup returns the application security group client.
+func (c *MockAzureCloud) ApplicationSecurityGroup() azure.ApplicationSecurityGroupClient {
+	return c.ApplicationSecurityGroupClient
+}
+
+// NetworkSecurityGroup returns the network security group client.
+func (c *MockAzureCloud) NetworkSecurityGroup() azure.NetworkSecurityGroupClient {
+	return c.NetworkSecurityGroupClient
 }
 
 // MockResourceGroupsClient is a mock implementation of resource group client.
@@ -601,5 +619,77 @@ func (c *MockPublicIPAddressesClient) Delete(ctx context.Context, scope, publicI
 		return fmt.Errorf("%s does not exist", publicIPAddressName)
 	}
 	delete(c.PubIPs, publicIPAddressName)
+	return nil
+}
+
+// MockApplicationSecurityGroupClient is a mock implementation of role assignment client.
+type MockApplicationSecurityGroupClient struct {
+	ASGs map[string]network.ApplicationSecurityGroup
+}
+
+var _ azure.ApplicationSecurityGroupClient = &MockApplicationSecurityGroupClient{}
+
+// CreateOrUpdate creates a new application security group.
+func (c *MockApplicationSecurityGroupClient) CreateOrUpdate(ctx context.Context, resourceGroupName, applicationSGName string, parameters network.ApplicationSecurityGroup) error {
+	if _, ok := c.ASGs[applicationSGName]; ok {
+		return nil
+	}
+	parameters.Name = &applicationSGName
+	c.ASGs[applicationSGName] = parameters
+	return nil
+}
+
+// List returns a slice of application security groups.
+func (c *MockApplicationSecurityGroupClient) List(ctx context.Context, resourceGroupName string) ([]network.ApplicationSecurityGroup, error) {
+	var l []network.ApplicationSecurityGroup
+	for _, lb := range c.ASGs {
+		l = append(l, lb)
+	}
+	return l, nil
+}
+
+// Delete deletes a specified public ip address.
+func (c *MockApplicationSecurityGroupClient) Delete(ctx context.Context, scope, applicationSGName string) error {
+	// Ignore scope for simplicity.
+	if _, ok := c.ASGs[applicationSGName]; !ok {
+		return fmt.Errorf("%s does not exist", applicationSGName)
+	}
+	delete(c.ASGs, applicationSGName)
+	return nil
+}
+
+// MockNetworkSecurityGroupClient is a mock implementation of role assignment client.
+type MockNetworkSecurityGroupClient struct {
+	NSGs map[string]network.SecurityGroup
+}
+
+var _ azure.NetworkSecurityGroupClient = &MockNetworkSecurityGroupClient{}
+
+// CreateOrUpdate creates a new network security group.
+func (c *MockNetworkSecurityGroupClient) CreateOrUpdate(ctx context.Context, resourceGroupName, networkSGName string, parameters network.SecurityGroup) error {
+	if _, ok := c.NSGs[networkSGName]; ok {
+		return nil
+	}
+	parameters.Name = &networkSGName
+	c.NSGs[networkSGName] = parameters
+	return nil
+}
+
+// List returns a slice of network security groups.
+func (c *MockNetworkSecurityGroupClient) List(ctx context.Context, resourceGroupName string) ([]network.SecurityGroup, error) {
+	var l []network.SecurityGroup
+	for _, lb := range c.NSGs {
+		l = append(l, lb)
+	}
+	return l, nil
+}
+
+// Delete deletes a specified public ip address.
+func (c *MockNetworkSecurityGroupClient) Delete(ctx context.Context, scope, networkSGName string) error {
+	// Ignore scope for simplicity.
+	if _, ok := c.NSGs[networkSGName]; !ok {
+		return fmt.Errorf("%s does not exist", networkSGName)
+	}
+	delete(c.NSGs, networkSGName)
 	return nil
 }

@@ -166,13 +166,13 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 				// TODO: UDP vs TCP
 				// TODO: Protocol 4 for calico
 			},
-			Tags: b.Cluster.Spec.CloudLabels,
+			Tags: map[string]*string{},
 		}
 
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Application Security group for masters"),
-			Tags:        b.Cluster.Spec.CloudLabels,
+			Tags:         map[string]*string{},
 		}
 	} else if role == kops.InstanceGroupRoleNode {
 		name := b.SecurityGroupName(role)
@@ -180,13 +180,13 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 			Name:             fi.String(name),
 			Description:      fi.String("Network Security group for nodes"),
 			RemoveExtraRules: []string{"port=22"},
-			Tags:             b.Cluster.Spec.CloudLabels,
+			Tags:             map[string]*string{},
 		}
 
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Application Security group for nodes"),
-			Tags:        b.Cluster.Spec.CloudLabels,
+			Tags:        map[string]*string{},
 		}
 	} else if role == kops.InstanceGroupRoleBastion {
 		name := b.SecurityGroupName(role)
@@ -199,7 +199,7 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Application Security group for bastion"),
-			Tags:        b.Cluster.Spec.CloudLabels,
+			Tags:        map[string]*string{},
 		}
 	} else {
 		return nil, nil, fmt.Errorf("not a supported security group type")

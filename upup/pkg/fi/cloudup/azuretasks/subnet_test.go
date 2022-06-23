@@ -41,6 +41,7 @@ func TestSubnetRenderAzure(t *testing.T) {
 		},
 		CIDR:       to.StringPtr("10.0.0.0/8"),
 		RouteTable: to.StringPtr("kops-test"),
+		NetworkSecurityGroup: to.StringPtr("master-nsg"),
 	}
 	if err := subnet.RenderAzure(apiTarget, nil, expected, nil); err != nil {
 		t.Fatalf("unexpected error: %s", err)

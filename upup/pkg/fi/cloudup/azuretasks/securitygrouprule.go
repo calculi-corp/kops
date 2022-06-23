@@ -44,8 +44,8 @@ type SecurityGroupRule struct {
 	FromPort *int64
 	// ToPort is the upper-bound (inclusive) of the port-range
 	ToPort                              *int64
-	SourceApplicationSecurityGroup      *ApplicationSecurityGroup // source of the network traffic - applications attached to this ASG
-	DestinationApplicationSecurityGroup *ApplicationSecurityGroup // destination of the network traffic - applications attached to this ASG
+	SourceApplicationSecurityGroups     *[]ApplicationSecurityGroup // source(s) of the network traffic - applications attached to this ASG
+	DestinationApplicationSecurityGroups *[]ApplicationSecurityGroup // destination(s) of the network traffic - applications attached to this ASG
 	NetworkSecurityGroup                *NetworkSecurityGroup     // The NSG where this Rule will be attached to
 
 	Egress *bool

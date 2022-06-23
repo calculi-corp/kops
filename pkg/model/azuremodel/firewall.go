@@ -75,20 +75,23 @@ func (b *FirewallModelBuilder) buildNodeRules(c *fi.ModelBuilderContext) ([]Appl
 	}
 
 	// Nodes can talk to nodes
+	var sourceASGs = []azuretasks.ApplicationSecurityGroup{}
+	var destinationASGs = []azuretasks.ApplicationSecurityGroup{}
+	for _, asg := range asgNodeGroups {
+		sourceASGs = append(sourceASGs, *asg.Task)
+		destinationASGs = append(destinationASGs, *asg.Task)
+	}
+
 	for _, nsg := range nsgNodeGroups {
-		for _, src := range asgNodeGroups {
-			for _, dest := range asgNodeGroups {
-				t := &azuretasks.SecurityGroupRule{
-					Name:                                fi.String("node-to-node" + *src.Task.Name + *dest.Task.Name),
-					Lifecycle:                           b.Lifecycle,
-					ResourceGroup:                       b.LinkToResourceGroup(),
-					SourceApplicationSecurityGroup:      src.Task,
-					DestinationApplicationSecurityGroup: dest.Task,
-					NetworkSecurityGroup:                nsg.Task,
-				}
-				AddDirectionalGroupRule(c, t)
-			}
+		t := &azuretasks.SecurityGroupRule{
+			Name:                                 fi.String("node-to-node" + *nsg.Task.Name),
+			Lifecycle:                            b.Lifecycle,
+			ResourceGroup:                        b.LinkToResourceGroup(),
+			SourceApplicationSecurityGroups:      &sourceASGs,
+			DestinationApplicationSecurityGroups: &destinationASGs,
+			NetworkSecurityGroup:                 nsg.Task,
 		}
+		AddDirectionalGroupRule(c, t)
 	}
 	return asgNodeGroups, nil
 }
@@ -112,37 +115,45 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 	}
 
 	// Masters can talk to masters
+	var sourceASGs = []azuretasks.ApplicationSecurityGroup{}
+	var destinationASGs = []azuretasks.ApplicationSecurityGroup{}
+	for _, asg := range asgMasterGroups {
+		sourceASGs = append(sourceASGs, *asg.Task)
+		destinationASGs = append(destinationASGs, *asg.Task)
+	}
+
 	for _, nsg := range nsgMasterGroups {
-		for _, src := range asgMasterGroups {
-			for _, dest := range asgMasterGroups {
-				t := &azuretasks.SecurityGroupRule{
-					Name:                                fi.String("master-to-master-" + *src.Task.Name + *dest.Task.Name),
-					Lifecycle:                           b.Lifecycle,
-					ResourceGroup:                       b.LinkToResourceGroup(),
-					SourceApplicationSecurityGroup:      src.Task,
-					DestinationApplicationSecurityGroup: dest.Task,
-					NetworkSecurityGroup:                nsg.Task,
-				}
-				AddDirectionalGroupRule(c, t)
-			}
+		t := &azuretasks.SecurityGroupRule{
+			Name:                                 fi.String("master-to-master-" + *nsg.Task.Name),
+			Lifecycle:                            b.Lifecycle,
+			ResourceGroup:                        b.LinkToResourceGroup(),
+			SourceApplicationSecurityGroups:      &sourceASGs,
+			DestinationApplicationSecurityGroups: &destinationASGs,
+			NetworkSecurityGroup:                 nsg.Task,
 		}
+		AddDirectionalGroupRule(c, t)
 	}
 
 	// Masters can talk to nodes
+	var sourceASGsMasterNode = []azuretasks.ApplicationSecurityGroup{}
+	var destinationASGsMasterNode = []azuretasks.ApplicationSecurityGroup{}
+	for _, asg := range asgMasterGroups {
+		sourceASGsMasterNode = append(sourceASGs, *asg.Task)
+	}
+	for _, asg := range asgNodeGroups {
+		destinationASGsMasterNode = append(sourceASGs, *asg.Task)
+	}
+
 	for _, nsg := range nsgMasterGroups {
-		for _, src := range asgMasterGroups {
-			for _, dest := range asgNodeGroups {
-				t := &azuretasks.SecurityGroupRule{
-					Name:                                fi.String("master-to-node-" + *src.Task.Name + *dest.Task.Name),
-					Lifecycle:                           b.Lifecycle,
-					ResourceGroup:                       b.LinkToResourceGroup(),
-					SourceApplicationSecurityGroup:      src.Task,
-					DestinationApplicationSecurityGroup: dest.Task,
-					NetworkSecurityGroup:                nsg.Task,
-				}
-				AddDirectionalGroupRule(c, t)
-			}
+		t := &azuretasks.SecurityGroupRule{
+			Name:                                 fi.String("master-to-node-" + *nsg.Task.Name),
+			Lifecycle:                            b.Lifecycle,
+			ResourceGroup:                        b.LinkToResourceGroup(),
+			SourceApplicationSecurityGroups:      &sourceASGsMasterNode,
+			DestinationApplicationSecurityGroups: &destinationASGsMasterNode,
+			NetworkSecurityGroup:                 nsg.Task,
 		}
+		AddDirectionalGroupRule(c, t)
 	}
 
 	return nil

@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
@@ -46,20 +47,21 @@ const (
 
 // MockAzureCloud is a mock implementation of AzureCloud.
 type MockAzureCloud struct {
-	Location                string
-	ResourceGroupsClient    *MockResourceGroupsClient
-	VirtualNetworksClient   *MockVirtualNetworksClient
-	SubnetsClient           *MockSubnetsClient
-	RouteTablesClient       *MockRouteTablesClient
-	VMScaleSetsClient       *MockVMScaleSetsClient
-	VMScaleSetVMsClient     *MockVMScaleSetVMsClient
-	DisksClient             *MockDisksClient
-	RoleAssignmentsClient   *MockRoleAssignmentsClient
-	NetworkInterfacesClient *MockNetworkInterfacesClient
-	LoadBalancersClient     *MockLoadBalancersClient
-	PublicIPAddressesClient *MockPublicIPAddressesClient
+	Location                       string
+	ResourceGroupsClient           *MockResourceGroupsClient
+	VirtualNetworksClient          *MockVirtualNetworksClient
+	SubnetsClient                  *MockSubnetsClient
+	RouteTablesClient              *MockRouteTablesClient
+	VMScaleSetsClient              *MockVMScaleSetsClient
+	VMScaleSetVMsClient            *MockVMScaleSetVMsClient
+	DisksClient                    *MockDisksClient
+	RoleAssignmentsClient          *MockRoleAssignmentsClient
+	NetworkInterfacesClient        *MockNetworkInterfacesClient
+	LoadBalancersClient            *MockLoadBalancersClient
+	PublicIPAddressesClient        *MockPublicIPAddressesClient
 	ApplicationSecurityGroupClient *MockApplicationSecurityGroupClient
-	NetworkSecurityGroupClient *MockNetworkSecurityGroupClient
+	NetworkSecurityGroupClient     *MockNetworkSecurityGroupClient
+	SecurityRulesClient            *MockSecurityRulesClient
 }
 
 var _ azure.AzureCloud = &MockAzureCloud{}
@@ -106,6 +108,9 @@ func NewMockAzureCloud(location string) *MockAzureCloud {
 		},
 		NetworkSecurityGroupClient: &MockNetworkSecurityGroupClient{
 			NSGs: map[string]network.SecurityGroup{},
+		},
+		SecurityRulesClient: &MockSecurityRulesClient{
+			SecurityRules: map[string]network.SecurityRule{},
 		},
 	}
 }
@@ -246,6 +251,11 @@ func (c *MockAzureCloud) ApplicationSecurityGroup() azure.ApplicationSecurityGro
 // NetworkSecurityGroup returns the network security group client.
 func (c *MockAzureCloud) NetworkSecurityGroup() azure.NetworkSecurityGroupClient {
 	return c.NetworkSecurityGroupClient
+}
+
+// SecurityRulereturns the network security rules client.
+func (c *MockAzureCloud) SecurityRules() azure.SecurityRulesClient {
+	return c.SecurityRulesClient
 }
 
 // MockResourceGroupsClient is a mock implementation of resource group client.
@@ -691,5 +701,46 @@ func (c *MockNetworkSecurityGroupClient) Delete(ctx context.Context, scope, netw
 		return fmt.Errorf("%s does not exist", networkSGName)
 	}
 	delete(c.NSGs, networkSGName)
+	return nil
+}
+
+// MockSecurityRulesClient is a mock implementation of security rules client
+type MockSecurityRulesClient struct {
+	SecurityRules map[string]network.SecurityRule
+}
+
+var _ azure.SecurityRulesClient = &MockSecurityRulesClient{}
+
+// CreateOrUpdate creates a new network security group.
+func (c *MockSecurityRulesClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, networkSecurityGroupName string, securityRuleName string, parameters network.SecurityRule) error {
+	key := fmt.Sprintf("%s::%s::%s", resourceGroupName, networkSecurityGroupName, securityRuleName)
+	if _, ok := c.SecurityRules[key]; ok {
+		return nil
+	}
+	parameters.Name = &securityRuleName
+	c.SecurityRules[key] = parameters
+	return nil
+}
+
+// List returns a slice of network security groups.
+func (c *MockSecurityRulesClient) List(ctx context.Context, resourceGroupName string, networkSecurityGroupName string) ([]network.SecurityRule, error) {
+	var l []network.SecurityRule
+	for k, v := range c.SecurityRules {
+		key := fmt.Sprintf("%s::%s", resourceGroupName, networkSecurityGroupName)
+		if strings.HasPrefix(k, key) {
+			l = append(l, v)
+		}
+	}
+	return l, nil
+}
+
+// Delete deletes a specified public ip address.
+func (c *MockSecurityRulesClient) Delete(ctx context.Context, resourceGroupName, networkSecurityGroupName string, securityRuleName string) error {
+	key := fmt.Sprintf("%s::%s::%s", resourceGroupName, networkSecurityGroupName, securityRuleName)
+
+	if _, ok := c.SecurityRules[key]; !ok {
+		return fmt.Errorf("%s does not exist", securityRuleName)
+	}
+	delete(c.SecurityRules, key)
 	return nil
 }

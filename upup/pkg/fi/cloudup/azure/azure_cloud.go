@@ -57,25 +57,27 @@ type AzureCloud interface {
 	PublicIPAddress() PublicIPAddressesClient
 	ApplicationSecurityGroup() ApplicationSecurityGroupClient
 	NetworkSecurityGroup() NetworkSecurityGroupClient
+	SecurityRules() SecurityRulesClient
 }
 
 type azureCloudImplementation struct {
-	subscriptionID          string
-	location                string
-	tags                    map[string]string
-	resourceGroupsClient    ResourceGroupsClient
-	vnetsClient             VirtualNetworksClient
-	subnetsClient           SubnetsClient
-	routeTablesClient       RouteTablesClient
-	vmscaleSetsClient       VMScaleSetsClient
-	vmscaleSetVMsClient     VMScaleSetVMsClient
-	disksClient             DisksClient
-	roleAssignmentsClient   RoleAssignmentsClient
-	networkInterfacesClient NetworkInterfacesClient
-	loadBalancersClient     LoadBalancersClient
-	publicIPAddressesClient PublicIPAddressesClient
+	subscriptionID                 string
+	location                       string
+	tags                           map[string]string
+	resourceGroupsClient           ResourceGroupsClient
+	vnetsClient                    VirtualNetworksClient
+	subnetsClient                  SubnetsClient
+	routeTablesClient              RouteTablesClient
+	vmscaleSetsClient              VMScaleSetsClient
+	vmscaleSetVMsClient            VMScaleSetVMsClient
+	disksClient                    DisksClient
+	roleAssignmentsClient          RoleAssignmentsClient
+	networkInterfacesClient        NetworkInterfacesClient
+	loadBalancersClient            LoadBalancersClient
+	publicIPAddressesClient        PublicIPAddressesClient
 	applicationSecurityGroupClient ApplicationSecurityGroupClient
-	networkSecurityGroupClient NetworkSecurityGroupClient
+	networkSecurityGroupClient     NetworkSecurityGroupClient
+	securityRulesClient            SecurityRulesClient
 }
 
 var _ fi.Cloud = &azureCloudImplementation{}
@@ -88,22 +90,23 @@ func NewAzureCloud(subscriptionID, location string, tags map[string]string) (Azu
 	}
 
 	return &azureCloudImplementation{
-		subscriptionID:          subscriptionID,
-		location:                location,
-		tags:                    tags,
-		resourceGroupsClient:    newResourceGroupsClientImpl(subscriptionID, authorizer),
-		vnetsClient:             newVirtualNetworksClientImpl(subscriptionID, authorizer),
-		subnetsClient:           newSubnetsClientImpl(subscriptionID, authorizer),
-		routeTablesClient:       newRouteTablesClientImpl(subscriptionID, authorizer),
-		vmscaleSetsClient:       newVMScaleSetsClientImpl(subscriptionID, authorizer),
-		vmscaleSetVMsClient:     newVMScaleSetVMsClientImpl(subscriptionID, authorizer),
-		disksClient:             newDisksClientImpl(subscriptionID, authorizer),
-		roleAssignmentsClient:   newRoleAssignmentsClientImpl(subscriptionID, authorizer),
-		networkInterfacesClient: newNetworkInterfacesClientImpl(subscriptionID, authorizer),
-		loadBalancersClient:     newLoadBalancersClientImpl(subscriptionID, authorizer),
-		publicIPAddressesClient: newPublicIPAddressesClientImpl(subscriptionID, authorizer),
+		subscriptionID:                 subscriptionID,
+		location:                       location,
+		tags:                           tags,
+		resourceGroupsClient:           newResourceGroupsClientImpl(subscriptionID, authorizer),
+		vnetsClient:                    newVirtualNetworksClientImpl(subscriptionID, authorizer),
+		subnetsClient:                  newSubnetsClientImpl(subscriptionID, authorizer),
+		routeTablesClient:              newRouteTablesClientImpl(subscriptionID, authorizer),
+		vmscaleSetsClient:              newVMScaleSetsClientImpl(subscriptionID, authorizer),
+		vmscaleSetVMsClient:            newVMScaleSetVMsClientImpl(subscriptionID, authorizer),
+		disksClient:                    newDisksClientImpl(subscriptionID, authorizer),
+		roleAssignmentsClient:          newRoleAssignmentsClientImpl(subscriptionID, authorizer),
+		networkInterfacesClient:        newNetworkInterfacesClientImpl(subscriptionID, authorizer),
+		loadBalancersClient:            newLoadBalancersClientImpl(subscriptionID, authorizer),
+		publicIPAddressesClient:        newPublicIPAddressesClientImpl(subscriptionID, authorizer),
 		applicationSecurityGroupClient: newApplicationSecurityGroupClientImpl(subscriptionID, authorizer),
-		networkSecurityGroupClient: newNetworkSecurityGroupClientImpl(subscriptionID, authorizer),
+		networkSecurityGroupClient:     newNetworkSecurityGroupClientImpl(subscriptionID, authorizer),
+		securityRulesClient:            newSecurityRulesClientImpl(subscriptionID, authorizer),
 	}, nil
 }
 
@@ -314,4 +317,8 @@ func (c *azureCloudImplementation) ApplicationSecurityGroup() ApplicationSecurit
 
 func (c *azureCloudImplementation) NetworkSecurityGroup() NetworkSecurityGroupClient {
 	return c.networkSecurityGroupClient
+}
+
+func (c *azureCloudImplementation) SecurityRules() SecurityRulesClient {
+	return c.securityRulesClient
 }

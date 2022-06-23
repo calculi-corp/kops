@@ -38,12 +38,19 @@ type Subnet struct {
 	CIDR           *string
 	Shared         *bool
 	RouteTable     *string
+	NetworkSecurityGroup *string
 }
 
 type RouteTableID struct {
-	SubscriptionID     string
-	ResourceGroupName  string
-	RouteTableName         string
+	SubscriptionID    string
+	ResourceGroupName string
+	RouteTableName    string
+}
+
+type NetworkSecurityGroupID struct {
+	SubscriptionID           string
+	ResourceGroupName        string
+	NetworkSecurityGroupName string
 }
 
 func (r *RouteTableID) String() string {
@@ -51,6 +58,13 @@ func (r *RouteTableID) String() string {
 		r.SubscriptionID,
 		r.ResourceGroupName,
 		r.RouteTableName)
+}
+
+func (r *NetworkSecurityGroupID) String() string {
+	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkSecurityGroups/%s",
+		r.SubscriptionID,
+		r.ResourceGroupName,
+		r.NetworkSecurityGroupName)
 }
 
 var (
@@ -125,17 +139,25 @@ func (*Subnet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Subnet) error
 	}
 
 	routeTableID := RouteTableID{
-		SubscriptionID:     t.Cloud.SubscriptionID(),
-		ResourceGroupName:  *e.ResourceGroup.Name,
-		RouteTableName:         *e.RouteTable,
+		SubscriptionID:    t.Cloud.SubscriptionID(),
+		ResourceGroupName: *e.ResourceGroup.Name,
+		RouteTableName:    *e.RouteTable,
 	}
 
-	// TODO(kenji): Be able to specify security groups.
+	networkSecurityGroupID := NetworkSecurityGroupID{
+		SubscriptionID:    t.Cloud.SubscriptionID(),
+		ResourceGroupName: *e.ResourceGroup.Name,
+		NetworkSecurityGroupName:    *e.NetworkSecurityGroup,
+	}
+
 	subnet := network.Subnet{
 		SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
 			AddressPrefix: e.CIDR,
 			RouteTable: &network.RouteTable{
 				ID: to.StringPtr(routeTableID.String()),
+			},
+			NetworkSecurityGroup: &network.SecurityGroup{
+				ID: to.StringPtr(networkSecurityGroupID.String()),
 			},
 		},
 	}

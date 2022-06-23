@@ -17,6 +17,7 @@ limitations under the License.
 package azuremodel
 
 import (
+	"k8s.io/kops/pkg/apis/kops"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/azuretasks"
 )
@@ -50,6 +51,7 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 			CIDR:           fi.String(subnetSpec.CIDR),
 			Shared:         fi.Bool(b.Cluster.SharedVPC()),
 			RouteTable:     fi.String(b.NameForRouteTable()),
+			NetworkSecurityGroup: fi.String(b.SecurityGroupName(kops.InstanceGroupRoleMaster)),
 		}
 		c.AddTask(subnetTask)
 	}

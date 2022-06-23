@@ -27,6 +27,19 @@ import (
 	"k8s.io/kops/upup/pkg/fi/cloudup/azure"
 )
 
+type ApplicationSecurityGroupID struct {
+	SubscriptionID               string
+	ResourceGroupName            string
+	ApplicationSecurityGroupName string
+}
+
+func (r *ApplicationSecurityGroupID) String() string {
+	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/applicationSecurityGroups/%s",
+		r.SubscriptionID,
+		r.ResourceGroupName,
+		r.ApplicationSecurityGroupName)
+}
+
 // +kops:fitask
 type SecurityGroupRule struct {
 	ID            *string
@@ -39,14 +52,15 @@ type SecurityGroupRule struct {
 	PrefixList *string
 	Protocol   *string
 	Priority   *int32
+	AccessType *string // Allow or Deny
 
 	// FromPort is the lower-bound (inclusive) of the port-range
-	FromPort *int64
+	FromPort *string
 	// ToPort is the upper-bound (inclusive) of the port-range
-	ToPort                              *int64
-	SourceApplicationSecurityGroups     *[]ApplicationSecurityGroup // source(s) of the network traffic - applications attached to this ASG
-	DestinationApplicationSecurityGroups *[]ApplicationSecurityGroup // destination(s) of the network traffic - applications attached to this ASG
-	NetworkSecurityGroup                *NetworkSecurityGroup     // The NSG where this Rule will be attached to
+	ToPort                               *string
+	SourceApplicationSecurityGroups      *[]ApplicationSecurityGroup // source of the network traffic - applications attached to this ASG
+	DestinationApplicationSecurityGroups *[]ApplicationSecurityGroup // destination of the network traffic - applications attached to this ASG
+	NetworkSecurityGroup                 *NetworkSecurityGroup       // The NSG where this Rule will be attached to
 
 	Egress *bool
 }
@@ -103,6 +117,11 @@ func (*SecurityGroupRule) CheckChanges(a, e, changes *SecurityGroupRule) error {
 	return nil
 }
 
+// GetDependencies returns a slice of tasks on which the tasks depends on.
+func (p *SecurityGroupRule) GetDependencies(tasks map[string]fi.Task) []fi.Task {
+	return nil
+}
+
 // RenderAzure creates or updates an Network security group.
 func (*SecurityGroupRule) RenderAzure(t *azure.AzureAPITarget, a, e, changes *SecurityGroupRule) error {
 	if a == nil {
@@ -111,21 +130,52 @@ func (*SecurityGroupRule) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Se
 		klog.Infof("Updating security rule with name: %s", fi.StringValue(e.Name))
 	}
 
-	fromPort := fmt.Sprintf("%v", *e.FromPort)
-	toPort := fmt.Sprintf("%v", *e.ToPort)
-	any := "Any"
+	var sourceAsg = []network.ApplicationSecurityGroup{}
+	var destinationAsg = []network.ApplicationSecurityGroup{}
+
+	for _, group := range *e.SourceApplicationSecurityGroups {
+
+		var applicationSecurityGroupID = ApplicationSecurityGroupID{
+			SubscriptionID:               t.Cloud.SubscriptionID(),
+			ResourceGroupName:            *e.ResourceGroup.Name,
+			ApplicationSecurityGroupName: *group.Name,
+		}
+
+		asg := network.ApplicationSecurityGroup{ID: to.StringPtr(applicationSecurityGroupID.String())}
+
+		sourceAsg = append(sourceAsg, asg)
+	}
+
+	for _, group := range *e.DestinationApplicationSecurityGroups {
+
+		var applicationSecurityGroupID = ApplicationSecurityGroupID{
+			SubscriptionID:               t.Cloud.SubscriptionID(),
+			ResourceGroupName:            *e.ResourceGroup.Name,
+			ApplicationSecurityGroupName: *group.Name,
+		}
+
+		asg := network.ApplicationSecurityGroup{ID: to.StringPtr(applicationSecurityGroupID.String())}
+
+		destinationAsg = append(destinationAsg, asg)
+	}
+
+	direction := "Inbound"
+
+	if *e.Egress {
+		direction = "Outbound"
+	}
 
 	sr := network.SecurityRule{
-		Name: to.StringPtr(*e.Name),
+		Name: e.Name,
 		SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-			Protocol:                 network.SecurityRuleProtocol(*e.Protocol),
-			Priority:                 e.Priority,
-			Access:                   network.SecurityRuleAccess("Allow"),
-			Direction:                network.SecurityRuleDirection("Inbound"),
-			SourcePortRange:          &fromPort,
-			DestinationPortRange:     &toPort,
-			SourceAddressPrefix:      &any,
-			DestinationAddressPrefix: &any,
+			Protocol:                             network.SecurityRuleProtocol(*e.Protocol),
+			Priority:                             e.Priority,
+			Access:                               network.SecurityRuleAccess(*e.AccessType),
+			Direction:                            network.SecurityRuleDirection(direction),
+			SourcePortRange:                      e.FromPort,
+			DestinationPortRange:                 e.ToPort,
+			SourceApplicationSecurityGroups:      &sourceAsg,
+			DestinationApplicationSecurityGroups: &destinationAsg,
 		},
 	}
 

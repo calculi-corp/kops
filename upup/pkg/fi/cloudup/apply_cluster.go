@@ -639,6 +639,8 @@ func (c *ApplyClusterCmd) Run(ctx context.Context) error {
 				&azuremodel.NetworkModelBuilder{AzureModelContext: azureModelContext, Lifecycle: clusterLifecycle},
 				&azuremodel.ResourceGroupModelBuilder{AzureModelContext: azureModelContext, Lifecycle: clusterLifecycle},
 
+				&azuremodel.FirewallModelBuilder{AzureModelContext: azureModelContext, Lifecycle: clusterLifecycle},
+
 				&azuremodel.VMScaleSetModelBuilder{AzureModelContext: azureModelContext, BootstrapScriptBuilder: bootstrapScriptBuilder, Lifecycle: clusterLifecycle},
 			)
 		case kops.CloudProviderOpenstack:

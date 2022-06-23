@@ -46,39 +46,20 @@ type ApplicationSecurityGroupInfo struct {
 var _ fi.ModelBuilder = &FirewallModelBuilder{}
 
 func (b *FirewallModelBuilder) Build(c *fi.ModelBuilderContext) error {
-	nsgNodeGroups, asgNodeGroups, err := b.buildNodeRules(c)
+	asgNodeGroups, err := b.buildNodeRules(c)
 	if err != nil {
 		return err
 	}
 
-	nsgMasterGroups, asgMasterGroups, err := b.buildMasterRules(c, asgNodeGroups)
-	if err != nil {
-		return err
-	}
+	err = b.buildMasterRules(c, asgNodeGroups)
 
-	for _, group := range asgMasterGroups {
-		c.AddTask(group.Task)
-	}
-
-	for _, group := range asgNodeGroups {
-		c.AddTask(group.Task)
-	}
-
-	for _, group := range nsgMasterGroups {
-		c.AddTask(group.Task)
-	}
-
-	for _, group := range nsgNodeGroups {
-		c.AddTask(group.Task)
-	}
-	return nil
+	return err
 }
 
-func (b *FirewallModelBuilder) buildNodeRules(c *fi.ModelBuilderContext) ([]NetworkSecurityGroupInfo,
-	[]ApplicationSecurityGroupInfo, error) {
+func (b *FirewallModelBuilder) buildNodeRules(c *fi.ModelBuilderContext) ([]ApplicationSecurityGroupInfo, error) {
 	nsgNodeGroups, asgNodeGroups, err := b.GetSecurityGroups(kops.InstanceGroupRoleNode)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	for _, group := range nsgNodeGroups {
@@ -93,14 +74,13 @@ func (b *FirewallModelBuilder) buildNodeRules(c *fi.ModelBuilderContext) ([]Netw
 		c.AddTask(group.Task)
 	}
 
-	return nsgNodeGroups, asgNodeGroups, nil
+	return asgNodeGroups, nil
 }
 
-func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNodeGroups []ApplicationSecurityGroupInfo) ([]NetworkSecurityGroupInfo,
-	[]ApplicationSecurityGroupInfo, error) {
+func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNodeGroups []ApplicationSecurityGroupInfo) error {
 	nsgMasterGroups, asgMasterGroups, err := b.GetSecurityGroups(kops.InstanceGroupRoleMaster)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	for _, group := range nsgMasterGroups {
@@ -139,7 +119,7 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 		AddDirectionalGroupRule(c, t)
 	}
 
-	return nsgMasterGroups, asgMasterGroups, nil
+	return nil
 }
 
 func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]NetworkSecurityGroupInfo,
@@ -172,7 +152,7 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Application Security group for masters"),
-			Tags:         map[string]*string{},
+			Tags:        map[string]*string{},
 		}
 	} else if role == kops.InstanceGroupRoleNode {
 		name := b.SecurityGroupName(role)

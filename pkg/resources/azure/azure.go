@@ -41,6 +41,7 @@ const (
 	typeRoleAssignment  = "RoleAssignment"
 	typeLoadBalancer    = "LoadBalancer"
 	typePublicIPAddress = "PublicIPAddress"
+	typeApplicationSecurityGroup = "ApplicationSecurityGroup"
 )
 
 // ListResourcesAzure lists all resources for the cluster by quering Azure.
@@ -91,6 +92,7 @@ func (g *resourceGetter) listAll() ([]*resources.Resource, error) {
 		g.listDisks,
 		g.listLoadBalancers,
 		g.listPublicIPAddresses,
+		g.listApplicationSecurityGroups,
 	}
 
 	var resources []*resources.Resource
@@ -464,6 +466,38 @@ func (g *resourceGetter) toPublicIPAddressResource(publicIPAddress *network.Publ
 
 func (g *resourceGetter) deletePublicIPAddress(_ fi.Cloud, r *resources.Resource) error {
 	return g.cloud.PublicIPAddress().Delete(context.TODO(), g.resourceGroupName(), r.Name)
+}
+
+func (g *resourceGetter) listApplicationSecurityGroups(ctx context.Context) ([]*resources.Resource, error) {
+	asgs, err := g.cloud.ApplicationSecurityGroup().List(ctx, g.resourceGroupName())
+	if err != nil {
+		return nil, err
+	}
+
+	var rs []*resources.Resource
+	for i := range asgs {
+		p := &asgs[i]
+		if !g.isOwnedByCluster(p.Tags) {
+			continue
+		}
+		rs = append(rs, g.toApplicationSecurityGroupResource(p))
+	}
+	return rs, nil
+}
+
+func (g *resourceGetter) toApplicationSecurityGroupResource(applicationSecurityGroup *network.ApplicationSecurityGroup) *resources.Resource {
+	return &resources.Resource{
+		Obj:     applicationSecurityGroup,
+		Type:    typeApplicationSecurityGroup,
+		ID:      *applicationSecurityGroup.Name,
+		Name:    *applicationSecurityGroup.Name,
+		Deleter: g.deleteApplicationSecurityGroup,
+		Blocks:  []string{toKey(typeResourceGroup, g.resourceGroupName())},
+	}
+}
+
+func (g *resourceGetter) deleteApplicationSecurityGroup(_ fi.Cloud, r *resources.Resource) error {
+	return g.cloud.ApplicationSecurityGroup().Delete(context.TODO(), g.resourceGroupName(), r.Name)
 }
 
 // isOwnedByCluster returns true if the resource is owned by the cluster.

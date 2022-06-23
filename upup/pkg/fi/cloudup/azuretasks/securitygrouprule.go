@@ -29,11 +29,10 @@ import (
 
 // +kops:fitask
 type SecurityGroupRule struct {
-	ID                   *string
-	Name                 *string
-	Lifecycle            fi.Lifecycle
-	ResourceGroup        *ResourceGroup
-	NetworkSecurityGroup *NetworkSecurityGroup
+	ID            *string
+	Name          *string
+	Lifecycle     fi.Lifecycle
+	ResourceGroup *ResourceGroup
 
 	CIDR       *string
 	IPv6CIDR   *string
@@ -44,8 +43,10 @@ type SecurityGroupRule struct {
 	// FromPort is the lower-bound (inclusive) of the port-range
 	FromPort *int64
 	// ToPort is the upper-bound (inclusive) of the port-range
-	ToPort                         *int64
-	SourceApplicationSecurityGroup *ApplicationSecurityGroup
+	ToPort                              *int64
+	SourceApplicationSecurityGroup      *ApplicationSecurityGroup // source of the network traffic - applications attached to this ASG
+	DestinationApplicationSecurityGroup *ApplicationSecurityGroup // destination of the network traffic - applications attached to this ASG
+	NetworkSecurityGroup                *NetworkSecurityGroup     // The NSG where this Rule will be attached to
 
 	Egress *bool
 }

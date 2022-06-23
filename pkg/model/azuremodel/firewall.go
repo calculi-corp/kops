@@ -74,6 +74,22 @@ func (b *FirewallModelBuilder) buildNodeRules(c *fi.ModelBuilderContext) ([]Appl
 		c.AddTask(group.Task)
 	}
 
+	// Nodes can talk to nodes
+	for _, nsg := range nsgNodeGroups {
+		for _, src := range asgNodeGroups {
+			for _, dest := range asgNodeGroups {
+				t := &azuretasks.SecurityGroupRule{
+					Name:                                fi.String("node-to-node" + *src.Task.Name + *dest.Task.Name),
+					Lifecycle:                           b.Lifecycle,
+					ResourceGroup:                       b.LinkToResourceGroup(),
+					SourceApplicationSecurityGroup:      src.Task,
+					DestinationApplicationSecurityGroup: dest.Task,
+					NetworkSecurityGroup:                nsg.Task,
+				}
+				AddDirectionalGroupRule(c, t)
+			}
+		}
+	}
 	return asgNodeGroups, nil
 }
 
@@ -96,27 +112,37 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 	}
 
 	// Masters can talk to masters
-	for _, src := range asgMasterGroups {
-		t := &azuretasks.SecurityGroupRule{
-			Name:                           fi.String("master-to-master-" + *src.Task.Name),
-			Lifecycle:                      b.Lifecycle,
-			ResourceGroup:                  b.LinkToResourceGroup(),
-			SourceApplicationSecurityGroup: src.Task,
-			Tags:                           b.Cluster.Spec.CloudLabels,
+	for _, nsg := range nsgMasterGroups {
+		for _, src := range asgMasterGroups {
+			for _, dest := range asgMasterGroups {
+				t := &azuretasks.SecurityGroupRule{
+					Name:                                fi.String("master-to-master-" + *src.Task.Name + *dest.Task.Name),
+					Lifecycle:                           b.Lifecycle,
+					ResourceGroup:                       b.LinkToResourceGroup(),
+					SourceApplicationSecurityGroup:      src.Task,
+					DestinationApplicationSecurityGroup: dest.Task,
+					NetworkSecurityGroup:                nsg.Task,
+				}
+				AddDirectionalGroupRule(c, t)
+			}
 		}
-		AddDirectionalGroupRule(c, t)
 	}
 
 	// Masters can talk to nodes
-	for _, src := range asgNodeGroups {
-		t := &azuretasks.SecurityGroupRule{
-			Name:                           fi.String("master-to-node" + *src.Task.Name),
-			Lifecycle:                      b.Lifecycle,
-			ResourceGroup:                  b.LinkToResourceGroup(),
-			SourceApplicationSecurityGroup: src.Task,
-			Tags:                           b.Cluster.Spec.CloudLabels,
+	for _, nsg := range nsgMasterGroups {
+		for _, src := range asgMasterGroups {
+			for _, dest := range asgNodeGroups {
+				t := &azuretasks.SecurityGroupRule{
+					Name:                                fi.String("master-to-node-" + *src.Task.Name + *dest.Task.Name),
+					Lifecycle:                           b.Lifecycle,
+					ResourceGroup:                       b.LinkToResourceGroup(),
+					SourceApplicationSecurityGroup:      src.Task,
+					DestinationApplicationSecurityGroup: dest.Task,
+					NetworkSecurityGroup:                nsg.Task,
+				}
+				AddDirectionalGroupRule(c, t)
+			}
 		}
-		AddDirectionalGroupRule(c, t)
 	}
 
 	return nil

@@ -26,6 +26,13 @@ import (
 	"k8s.io/kops/upup/pkg/fi/cloudup/azuretasks"
 )
 
+const (
+	baseSGRulePriorityMasterToMaster = 100
+	baseSGRulePriorityMasterToNode   = 200
+	baseSGRulePriorityNodeToNode     = 300
+	sGRulePriorityMasterSSHAccess    = 400
+)
+
 // FirewallModelBuilder configures firewall network objects
 type FirewallModelBuilder struct {
 	*AzureModelContext
@@ -84,11 +91,11 @@ func (b *FirewallModelBuilder) buildNodeRules(c *fi.ModelBuilderContext) ([]Appl
 	}
 
 	var priority int32
-	priority = 300
+	priority = baseSGRulePriorityNodeToNode
 	for _, nsg := range nsgNodeGroups {
 		priority = priority + 1
 		t := &azuretasks.SecurityGroupRule{
-			Name:                                 fi.String("node-to-node" + *nsg.Task.Name),
+			Name:                                 fi.String("node-to-node-" + *nsg.Task.Name),
 			Lifecycle:                            b.Lifecycle,
 			ResourceGroup:                        b.LinkToResourceGroup(),
 			SourceApplicationSecurityGroups:      &sourceASGs,
@@ -133,7 +140,7 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 	}
 
 	var priority int32
-	priority = 100
+	priority = baseSGRulePriorityMasterToMaster
 	for _, nsg := range nsgMasterGroups {
 		priority = priority + 1
 		t := &azuretasks.SecurityGroupRule{
@@ -151,6 +158,7 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 			Priority:                             to.Int32Ptr(priority),
 		}
 		AddDirectionalGroupRule(c, t)
+		b.sshAccessMaster(c, nsg, sGRulePriorityMasterSSHAccess) // add security group rules to allow SSH access to master nodes. One for each master node
 	}
 
 	// Masters can talk to nodes
@@ -163,7 +171,7 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 		destinationASGsMasterNode = append(sourceASGs, *asg.Task)
 	}
 
-	priority = 200
+	priority = baseSGRulePriorityMasterToNode
 	for _, nsg := range nsgMasterGroups {
 		priority = priority + 1
 		t := &azuretasks.SecurityGroupRule{
@@ -186,6 +194,24 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 	return nil
 }
 
+func (b *FirewallModelBuilder) sshAccessMaster(c *fi.ModelBuilderContext, nsg NetworkSecurityGroupInfo, priority int32) {
+	t := &azuretasks.SecurityGroupRule{
+		Name:                 fi.String("ssh-to-master-" + *nsg.Task.Name),
+		Lifecycle:            b.Lifecycle,
+		ResourceGroup:        b.LinkToResourceGroup(),
+		SourceCIDRs:          to.StringSlicePtr(b.Cluster.Spec.SSHAccess),
+		DestinationCIDR:      to.StringPtr("VirtualNetwork"),
+		NetworkSecurityGroup: nsg.Task,
+		Protocol:             to.StringPtr("TCP"),
+		AccessType:           to.StringPtr("Allow"),
+		Egress:               to.BoolPtr(false),
+		ToPort:               to.StringPtr("22"),
+		FromPort:             to.StringPtr("*"),
+		Priority:             to.Int32Ptr(priority),
+	}
+	AddDirectionalGroupRule(c, t)
+}
+
 func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]NetworkSecurityGroupInfo,
 	[]ApplicationSecurityGroupInfo, error) {
 	var nsgBaseGroup *azuretasks.NetworkSecurityGroup
@@ -196,21 +222,7 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 		nsgBaseGroup = &azuretasks.NetworkSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Network Security group for masters"),
-			RemoveExtraRules: []string{
-				"port=22",   // SSH
-				"port=443",  // k8s api
-				"port=2380", // etcd main peer
-				"port=2381", // etcd events peer
-				"port=4001", // etcd main
-				"port=4002", // etcd events
-				"port=4789", // VXLAN
-				"port=179",  // Calico
-				"port=8443", // k8s api secondary listener
-
-				// TODO: UDP vs TCP
-				// TODO: Protocol 4 for calico
-			},
-			Tags: map[string]*string{},
+			Tags:        map[string]*string{},
 		}
 
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
@@ -221,10 +233,9 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 	} else if role == kops.InstanceGroupRoleNode {
 		name := b.SecurityGroupName(role)
 		nsgBaseGroup = &azuretasks.NetworkSecurityGroup{
-			Name:             fi.String(name),
-			Description:      fi.String("Network Security group for nodes"),
-			RemoveExtraRules: []string{"port=22"},
-			Tags:             map[string]*string{},
+			Name:        fi.String(name),
+			Description: fi.String("Network Security group for nodes"),
+			Tags:        map[string]*string{},
 		}
 
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
@@ -235,9 +246,8 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 	} else if role == kops.InstanceGroupRoleBastion {
 		name := b.SecurityGroupName(role)
 		nsgBaseGroup = &azuretasks.NetworkSecurityGroup{
-			Name:             fi.String(name),
-			Description:      fi.String("Network Security group for bastion"),
-			RemoveExtraRules: []string{"port=22"},
+			Name:        fi.String(name),
+			Description: fi.String("Network Security group for bastion"),
 		}
 
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{

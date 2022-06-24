@@ -47,9 +47,12 @@ type SecurityGroupRule struct {
 	Lifecycle     fi.Lifecycle
 	ResourceGroup *ResourceGroup
 
-	CIDR       *string
-	IPv6CIDR   *string
-	PrefixList *string
+	SourceCIDRs      *[]string
+	DestinationCIDRs *[]string
+
+	SourceCIDR      *string
+	DestinationCIDR *string
+
 	Protocol   *string
 	Priority   *int32
 	AccessType *string // Allow or Deny
@@ -130,53 +133,66 @@ func (*SecurityGroupRule) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Se
 		klog.Infof("Updating security rule with name: %s", fi.StringValue(e.Name))
 	}
 
-	var sourceAsg = []network.ApplicationSecurityGroup{}
-	var destinationAsg = []network.ApplicationSecurityGroup{}
-
-	for _, group := range *e.SourceApplicationSecurityGroups {
-
-		var applicationSecurityGroupID = ApplicationSecurityGroupID{
-			SubscriptionID:               t.Cloud.SubscriptionID(),
-			ResourceGroupName:            *e.ResourceGroup.Name,
-			ApplicationSecurityGroupName: *group.Name,
-		}
-
-		asg := network.ApplicationSecurityGroup{ID: to.StringPtr(applicationSecurityGroupID.String())}
-
-		sourceAsg = append(sourceAsg, asg)
-	}
-
-	for _, group := range *e.DestinationApplicationSecurityGroups {
-
-		var applicationSecurityGroupID = ApplicationSecurityGroupID{
-			SubscriptionID:               t.Cloud.SubscriptionID(),
-			ResourceGroupName:            *e.ResourceGroup.Name,
-			ApplicationSecurityGroupName: *group.Name,
-		}
-
-		asg := network.ApplicationSecurityGroup{ID: to.StringPtr(applicationSecurityGroupID.String())}
-
-		destinationAsg = append(destinationAsg, asg)
-	}
-
 	direction := "Inbound"
-
 	if *e.Egress {
 		direction = "Outbound"
 	}
-
 	sr := network.SecurityRule{
 		Name: e.Name,
 		SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-			Protocol:                             network.SecurityRuleProtocol(*e.Protocol),
-			Priority:                             e.Priority,
-			Access:                               network.SecurityRuleAccess(*e.AccessType),
-			Direction:                            network.SecurityRuleDirection(direction),
-			SourcePortRange:                      e.FromPort,
-			DestinationPortRange:                 e.ToPort,
-			SourceApplicationSecurityGroups:      &sourceAsg,
-			DestinationApplicationSecurityGroups: &destinationAsg,
+			Protocol:             network.SecurityRuleProtocol(*e.Protocol),
+			Priority:             e.Priority,
+			Access:               network.SecurityRuleAccess(*e.AccessType),
+			Direction:            network.SecurityRuleDirection(direction),
+			SourcePortRange:      e.FromPort,
+			DestinationPortRange: e.ToPort,
 		},
+	}
+
+	if e.SourceApplicationSecurityGroups != nil && e.DestinationApplicationSecurityGroups != nil {
+		var sourceAsg = []network.ApplicationSecurityGroup{}
+		var destinationAsg = []network.ApplicationSecurityGroup{}
+
+		for _, group := range *e.SourceApplicationSecurityGroups {
+			var applicationSecurityGroupID = ApplicationSecurityGroupID{
+				SubscriptionID:               t.Cloud.SubscriptionID(),
+				ResourceGroupName:            *e.ResourceGroup.Name,
+				ApplicationSecurityGroupName: *group.Name,
+			}
+
+			asg := network.ApplicationSecurityGroup{ID: to.StringPtr(applicationSecurityGroupID.String())}
+			sourceAsg = append(sourceAsg, asg)
+		}
+
+		for _, group := range *e.DestinationApplicationSecurityGroups {
+			var applicationSecurityGroupID = ApplicationSecurityGroupID{
+				SubscriptionID:               t.Cloud.SubscriptionID(),
+				ResourceGroupName:            *e.ResourceGroup.Name,
+				ApplicationSecurityGroupName: *group.Name,
+			}
+
+			asg := network.ApplicationSecurityGroup{ID: to.StringPtr(applicationSecurityGroupID.String())}
+			destinationAsg = append(destinationAsg, asg)
+		}
+
+		sr.SourceApplicationSecurityGroups = &sourceAsg
+		sr.DestinationApplicationSecurityGroups = &destinationAsg
+	}
+
+	if e.SourceCIDRs != nil {
+		sr.SourceAddressPrefixes = e.SourceCIDRs
+	}
+
+	if e.DestinationCIDRs != nil {
+		sr.DestinationAddressPrefixes = e.DestinationCIDRs
+	}
+
+	if e.SourceCIDR != nil {
+		sr.SourceAddressPrefix = e.SourceCIDR
+	}
+
+	if e.DestinationCIDR != nil {
+		sr.DestinationAddressPrefix = e.DestinationCIDR
 	}
 
 	return t.Cloud.SecurityRules().CreateOrUpdate(

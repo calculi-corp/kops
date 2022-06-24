@@ -34,8 +34,6 @@ type NetworkSecurityGroup struct {
 	ID          *string
 	Description *string
 
-	RemoveExtraRules []string
-
 	// Shared is set if this is a shared security group (one we don't create or own)
 	Shared *bool
 

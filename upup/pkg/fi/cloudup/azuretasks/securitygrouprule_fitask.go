@@ -25,9 +25,9 @@ import (
 	"k8s.io/kops/upup/pkg/fi"
 )
 
-// Subnet
+// SecurityGroupRule
 
-var _ fi.HasLifecycle = &Subnet{}
+var _ fi.HasLifecycle = &SecurityGroupRule{}
 
 // GetLifecycle returns the Lifecycle of the object, implementing fi.HasLifecycle
 func (o *SecurityGroupRule) GetLifecycle() fi.Lifecycle {
@@ -39,7 +39,7 @@ func (o *SecurityGroupRule) SetLifecycle(lifecycle fi.Lifecycle) {
 	o.Lifecycle = lifecycle
 }
 
-var _ fi.HasName = &Subnet{}
+var _ fi.HasName = &SecurityGroupRule{}
 
 // GetName returns the Name of the object, implementing fi.HasName
 func (o *SecurityGroupRule) GetName() *string {

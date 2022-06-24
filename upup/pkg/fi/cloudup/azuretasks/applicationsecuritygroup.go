@@ -27,8 +27,8 @@ import (
 )
 
 type ApplicationSecurityGroup struct {
-	Name      *string
-	Lifecycle fi.Lifecycle
+	Name          *string
+	Lifecycle     fi.Lifecycle
 	ResourceGroup *ResourceGroup
 
 	ID          *string
@@ -65,12 +65,12 @@ func (asg *ApplicationSecurityGroup) Find(c *fi.Context) (*ApplicationSecurityGr
 	}
 
 	return &ApplicationSecurityGroup{
-		Name: asg.Name,
+		Name:      asg.Name,
 		Lifecycle: asg.Lifecycle,
 		ResourceGroup: &ResourceGroup{
 			Name: asg.ResourceGroup.Name,
 		},
-		Tags:     found.Tags,
+		Tags: found.Tags,
 	}, nil
 }
 
@@ -104,11 +104,11 @@ func (*ApplicationSecurityGroup) RenderAzure(t *azure.AzureAPITarget, a, e, chan
 	} else {
 		klog.Infof("Updating an Application security group with name: %s", fi.StringValue(e.Name))
 	}
-	
+
 	asg := network.ApplicationSecurityGroup{
-		Name: to.StringPtr(*e.Name),
+		Name:     to.StringPtr(*e.Name),
 		Location: to.StringPtr(t.Cloud.Region()),
-		Tags: e.Tags,
+		Tags:     e.Tags,
 	}
 
 	return t.Cloud.ApplicationSecurityGroup().CreateOrUpdate(

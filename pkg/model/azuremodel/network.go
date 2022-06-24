@@ -44,13 +44,13 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 
 	for _, subnetSpec := range b.Cluster.Spec.Subnets {
 		subnetTask := &azuretasks.Subnet{
-			Name:           fi.String(subnetSpec.Name),
-			Lifecycle:      b.Lifecycle,
-			ResourceGroup:  b.LinkToResourceGroup(),
-			VirtualNetwork: b.LinkToVirtualNetwork(),
-			CIDR:           fi.String(subnetSpec.CIDR),
-			Shared:         fi.Bool(b.Cluster.SharedVPC()),
-			RouteTable:     fi.String(b.NameForRouteTable()),
+			Name:                 fi.String(subnetSpec.Name),
+			Lifecycle:            b.Lifecycle,
+			ResourceGroup:        b.LinkToResourceGroup(),
+			VirtualNetwork:       b.LinkToVirtualNetwork(),
+			CIDR:                 fi.String(subnetSpec.CIDR),
+			Shared:               fi.Bool(b.Cluster.SharedVPC()),
+			RouteTable:           fi.String(b.NameForRouteTable()),
 			NetworkSecurityGroup: fi.String(b.SecurityGroupName(kops.InstanceGroupRoleMaster)),
 		}
 		c.AddTask(subnetTask)

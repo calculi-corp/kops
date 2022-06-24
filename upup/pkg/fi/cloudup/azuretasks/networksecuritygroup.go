@@ -27,8 +27,8 @@ import (
 )
 
 type NetworkSecurityGroup struct {
-	Name      *string
-	Lifecycle fi.Lifecycle
+	Name          *string
+	Lifecycle     fi.Lifecycle
 	ResourceGroup *ResourceGroup
 
 	ID          *string
@@ -67,12 +67,12 @@ func (nsg *NetworkSecurityGroup) Find(c *fi.Context) (*NetworkSecurityGroup, err
 	}
 
 	return &NetworkSecurityGroup{
-		Name: nsg.Name,
+		Name:      nsg.Name,
 		Lifecycle: nsg.Lifecycle,
 		ResourceGroup: &ResourceGroup{
 			Name: nsg.ResourceGroup.Name,
 		},
-		Tags:     found.Tags,
+		Tags: found.Tags,
 	}, nil
 }
 
@@ -105,11 +105,11 @@ func (*NetworkSecurityGroup) RenderAzure(t *azure.AzureAPITarget, a, e, changes 
 	} else {
 		klog.Infof("Updating an Network security group with name: %s", fi.StringValue(e.Name))
 	}
-	
+
 	nsg := network.SecurityGroup{
-		Name: to.StringPtr(*e.Name),
+		Name:     to.StringPtr(*e.Name),
 		Location: to.StringPtr(t.Cloud.Region()),
-		Tags: e.Tags,
+		Tags:     e.Tags,
 	}
 
 	return t.Cloud.NetworkSecurityGroup().CreateOrUpdate(

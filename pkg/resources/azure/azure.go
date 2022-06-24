@@ -32,17 +32,17 @@ import (
 )
 
 const (
-	typeResourceGroup   = "ResourceGroup"
-	typeVirtualNetwork  = "VirtualNetwork"
-	typeSubnet          = "Subnet"
-	typeRouteTable      = "RouteTable"
-	typeVMScaleSet      = "VMScaleSet"
-	typeDisk            = "Disk"
-	typeRoleAssignment  = "RoleAssignment"
-	typeLoadBalancer    = "LoadBalancer"
-	typePublicIPAddress = "PublicIPAddress"
+	typeResourceGroup            = "ResourceGroup"
+	typeVirtualNetwork           = "VirtualNetwork"
+	typeSubnet                   = "Subnet"
+	typeRouteTable               = "RouteTable"
+	typeVMScaleSet               = "VMScaleSet"
+	typeDisk                     = "Disk"
+	typeRoleAssignment           = "RoleAssignment"
+	typeLoadBalancer             = "LoadBalancer"
+	typePublicIPAddress          = "PublicIPAddress"
 	typeApplicationSecurityGroup = "ApplicationSecurityGroup"
-	typeNetworkSecurityGroup = "SecurityGroup"
+	typeNetworkSecurityGroup     = "SecurityGroup"
 )
 
 // ListResourcesAzure lists all resources for the cluster by quering Azure.

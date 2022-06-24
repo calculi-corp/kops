@@ -35,7 +35,7 @@ type Disk struct {
 	ResourceGroup *ResourceGroup
 	SizeGB        *int32
 	Tags          map[string]*string
-	Zones *[]string
+	Zones         *[]string
 }
 
 var (
@@ -117,7 +117,7 @@ func (*Disk) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Disk) error {
 			},
 			DiskSizeGB: e.SizeGB,
 		},
-		Tags: e.Tags,
+		Tags:  e.Tags,
 		Zones: e.Zones,
 	}
 

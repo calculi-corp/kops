@@ -33,11 +33,11 @@ type Subnet struct {
 	Name      *string
 	Lifecycle fi.Lifecycle
 
-	ResourceGroup  *ResourceGroup
-	VirtualNetwork *VirtualNetwork
-	CIDR           *string
-	Shared         *bool
-	RouteTable     *string
+	ResourceGroup        *ResourceGroup
+	VirtualNetwork       *VirtualNetwork
+	CIDR                 *string
+	Shared               *bool
+	RouteTable           *string
 	NetworkSecurityGroup *string
 }
 
@@ -145,9 +145,9 @@ func (*Subnet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Subnet) error
 	}
 
 	networkSecurityGroupID := NetworkSecurityGroupID{
-		SubscriptionID:    t.Cloud.SubscriptionID(),
-		ResourceGroupName: *e.ResourceGroup.Name,
-		NetworkSecurityGroupName:    *e.NetworkSecurityGroup,
+		SubscriptionID:           t.Cloud.SubscriptionID(),
+		ResourceGroupName:        *e.ResourceGroup.Name,
+		NetworkSecurityGroupName: *e.NetworkSecurityGroup,
 	}
 
 	subnet := network.Subnet{

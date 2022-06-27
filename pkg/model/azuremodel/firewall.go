@@ -27,10 +27,11 @@ import (
 )
 
 const (
-	baseSGRulePriorityMasterToMaster = 100
-	baseSGRulePriorityMasterToNode   = 200
-	baseSGRulePriorityNodeToNode     = 300
-	sGRulePriorityMasterSSHAccess    = 400
+	baseSGRulePriorityMasterToMaster          = 100
+	baseSGRulePriorityMasterToNode            = 200
+	baseSGRulePriorityNodeToNode              = 300
+	sGRulePriorityMasterSSHAccess             = 400
+	sGRulePriorityMasterApiServerPublicAccess = 500
 )
 
 // FirewallModelBuilder configures firewall network objects
@@ -159,6 +160,9 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 		}
 		AddDirectionalGroupRule(c, t)
 		b.sshAccessMaster(c, nsg, sGRulePriorityMasterSSHAccess) // add security group rules to allow SSH access to master nodes. One for each master node
+		if b.Cluster.Spec.API.LoadBalancer.Type == kops.LoadBalancerTypePublic {
+			b.publicApiServerAccess(c, nsg, sGRulePriorityMasterApiServerPublicAccess) // add security group rules to allow external access to API server via 443
+		}
 	}
 
 	// Masters can talk to nodes
@@ -206,6 +210,26 @@ func (b *FirewallModelBuilder) sshAccessMaster(c *fi.ModelBuilderContext, nsg Ne
 		AccessType:           to.StringPtr("Allow"),
 		Egress:               to.BoolPtr(false),
 		ToPort:               to.StringPtr("22"),
+		FromPort:             to.StringPtr("*"),
+		Priority:             to.Int32Ptr(priority),
+	}
+	AddDirectionalGroupRule(c, t)
+}
+
+func (b *FirewallModelBuilder) publicApiServerAccess(c *fi.ModelBuilderContext, nsg NetworkSecurityGroupInfo, priority int32) {
+
+	t := &azuretasks.SecurityGroupRule{
+		Name:            fi.String("public-api-server-access-" + *nsg.Task.Name),
+		Lifecycle:       b.Lifecycle,
+		ResourceGroup:   b.LinkToResourceGroup(),
+		SourceCIDR:      to.StringPtr("Internet"),
+		DestinationCIDR: to.StringPtr("VirtualNetwork"),
+
+		NetworkSecurityGroup: nsg.Task,
+		Protocol:             to.StringPtr("TCP"),
+		AccessType:           to.StringPtr("Allow"),
+		Egress:               to.BoolPtr(false),
+		ToPort:               to.StringPtr("443"),
 		FromPort:             to.StringPtr("*"),
 		Priority:             to.Int32Ptr(priority),
 	}

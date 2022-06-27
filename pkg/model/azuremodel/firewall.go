@@ -99,11 +99,11 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 	}
 
 	// Masters can talk to masters
-	var sourceASGs = []azuretasks.ApplicationSecurityGroup{}
-	var destinationASGs = []azuretasks.ApplicationSecurityGroup{}
+	var masterSourceASGs = []azuretasks.ApplicationSecurityGroup{}
+	var masterDestinationASGs = []azuretasks.ApplicationSecurityGroup{}
 	for _, asg := range asgMasterGroups {
-		sourceASGs = append(sourceASGs, *asg.Task)
-		destinationASGs = append(destinationASGs, *asg.Task)
+		masterSourceASGs = append(masterSourceASGs, *asg.Task)
+		masterDestinationASGs = append(masterDestinationASGs, *asg.Task)
 	}
 
 	var priority int32
@@ -114,8 +114,8 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 			Name:                                 fi.String("master-to-master-" + *nsg.Task.Name),
 			Lifecycle:                            b.Lifecycle,
 			ResourceGroup:                        b.LinkToResourceGroup(),
-			SourceApplicationSecurityGroups:      &sourceASGs,
-			DestinationApplicationSecurityGroups: &destinationASGs,
+			SourceApplicationSecurityGroups:      &masterSourceASGs,
+			DestinationApplicationSecurityGroups: &masterDestinationASGs,
 			NetworkSecurityGroup:                 nsg.Task,
 			Protocol:                             to.StringPtr("*"),
 			AccessType:                           to.StringPtr("Allow"),
@@ -163,11 +163,11 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 
 
 	// Nodes can talk to nodes
-	sourceASGs = []azuretasks.ApplicationSecurityGroup{}
-	destinationASGs = []azuretasks.ApplicationSecurityGroup{}
+	var nodeSourceASGs = []azuretasks.ApplicationSecurityGroup{}
+	var nodeDestinationASGs = []azuretasks.ApplicationSecurityGroup{}
 	for _, asg := range asgNodeGroups {
-		sourceASGs = append(sourceASGs, *asg.Task)
-		destinationASGs = append(destinationASGs, *asg.Task)
+		nodeSourceASGs = append(nodeSourceASGs, *asg.Task)
+		nodeDestinationASGs = append(nodeDestinationASGs, *asg.Task)
 	}
 
 	priority = baseSGRulePriorityNodeToNode
@@ -177,8 +177,8 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 			Name:                                 fi.String("node-to-node-" + *nsg.Task.Name),
 			Lifecycle:                            b.Lifecycle,
 			ResourceGroup:                        b.LinkToResourceGroup(),
-			SourceApplicationSecurityGroups:      &sourceASGs,
-			DestinationApplicationSecurityGroups: &destinationASGs,
+			SourceApplicationSecurityGroups:      &nodeSourceASGs,
+			DestinationApplicationSecurityGroups: &nodeDestinationASGs,
 			NetworkSecurityGroup:                 nsg.Task,
 			Protocol:                             to.StringPtr("*"),
 			AccessType:                           to.StringPtr("Allow"),

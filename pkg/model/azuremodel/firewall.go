@@ -165,10 +165,10 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 	var sourceASGsMasterNode = []azuretasks.ApplicationSecurityGroup{}
 	var destinationASGsMasterNode = []azuretasks.ApplicationSecurityGroup{}
 	for _, asg := range asgMasterGroups {
-		sourceASGsMasterNode = append(sourceASGs, *asg.Task)
+		sourceASGsMasterNode = append(sourceASGsMasterNode, *asg.Task)
 	}
 	for _, asg := range asgNodeGroups {
-		destinationASGsMasterNode = append(sourceASGs, *asg.Task)
+		destinationASGsMasterNode = append(destinationASGsMasterNode, *asg.Task)
 	}
 
 	priority = baseSGRulePriorityMasterToNode

@@ -161,7 +161,6 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 		AddDirectionalGroupRule(c, t)
 	}
 
-
 	// Nodes can talk to nodes
 	var nodeSourceASGs = []azuretasks.ApplicationSecurityGroup{}
 	var nodeDestinationASGs = []azuretasks.ApplicationSecurityGroup{}

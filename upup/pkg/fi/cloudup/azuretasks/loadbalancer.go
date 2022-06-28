@@ -84,18 +84,23 @@ func (lb *LoadBalancer) Find(c *fi.Context) (*LoadBalancer, error) {
 	feConfig := feConfigs[0]
 	subnet := feConfig.FrontendIPConfigurationPropertiesFormat.Subnet
 
-	return &LoadBalancer{
+	loadBalancer := &LoadBalancer{
 		Name:      lb.Name,
 		Lifecycle: lb.Lifecycle,
 		ResourceGroup: &ResourceGroup{
 			Name: lb.ResourceGroup.Name,
 		},
-		Subnet: &Subnet{
-			Name: subnet.Name,
-		},
 		External: to.BoolPtr(feConfig.FrontendIPConfigurationPropertiesFormat.PublicIPAddress != nil),
 		Tags:     found.Tags,
-	}, nil
+	}
+
+	if subnet != nil {
+		loadBalancer.Subnet = &Subnet{
+			Name: subnet.Name,
+		}
+	}
+
+	return loadBalancer, nil
 }
 
 // Run implements fi.Task.Run.

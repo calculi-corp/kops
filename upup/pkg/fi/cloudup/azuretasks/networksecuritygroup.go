@@ -18,6 +18,7 @@ package azuretasks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -38,6 +39,51 @@ type NetworkSecurityGroup struct {
 	Shared *bool
 
 	Tags map[string]*string
+
+	Rules []*SecurityGroupRule
+}
+
+var _ fi.HasDependencies = &SecurityGroupRule{}
+
+// GetDependencies returns a slice of tasks on which the tasks depends on.
+func (p *SecurityGroupRule) GetDependencies(tasks map[string]fi.Task) []fi.Task {
+	return nil
+}
+
+type SecurityGroupRule struct {
+	Name *string
+
+	SourceCIDRs      *[]string
+	DestinationCIDRs *[]string
+
+	SourceCIDR      *string
+	DestinationCIDR *string
+
+	Protocol   *string
+	Priority   *int32
+	AccessType *string // Allow or Deny
+
+	// FromPort is the lower-bound (inclusive) of the port-range
+	FromPort *string
+	// ToPort is the upper-bound (inclusive) of the port-range
+	ToPort                               *string
+	SourceApplicationSecurityGroups      *[]ApplicationSecurityGroup // source of the network traffic - applications attached to this ASG
+	DestinationApplicationSecurityGroups *[]ApplicationSecurityGroup // destination of the network traffic - applications attached to this ASG
+
+	Egress *bool
+}
+
+type ApplicationSecurityGroupID struct {
+	SubscriptionID               string
+	ResourceGroupName            string
+	ApplicationSecurityGroupName string
+}
+
+func (r *ApplicationSecurityGroupID) String() string {
+	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/applicationSecurityGroups/%s",
+		r.SubscriptionID,
+		r.ResourceGroupName,
+		r.ApplicationSecurityGroupName)
 }
 
 // CompareWithID returns the Name of the Network security group
@@ -105,14 +151,88 @@ func (*NetworkSecurityGroup) RenderAzure(t *azure.AzureAPITarget, a, e, changes 
 	}
 
 	nsg := network.SecurityGroup{
-		Name:     to.StringPtr(*e.Name),
-		Location: to.StringPtr(t.Cloud.Region()),
-		Tags:     e.Tags,
+		Name:                          to.StringPtr(*e.Name),
+		Location:                      to.StringPtr(t.Cloud.Region()),
+		Tags:                          e.Tags,
+		SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{},
 	}
 
+	rules := []network.SecurityRule{}
+	for _, ruleTask := range e.Rules {
+		rule := getSecurityRuleFromTask(t, ruleTask, e)
+		rules = append(rules, rule)
+	}
+
+	nsg.SecurityGroupPropertiesFormat.SecurityRules = &rules
 	return t.Cloud.NetworkSecurityGroup().CreateOrUpdate(
 		context.TODO(),
 		*e.ResourceGroup.Name,
 		*e.Name,
 		nsg)
+}
+
+func getSecurityRuleFromTask(t *azure.AzureAPITarget, e *SecurityGroupRule, nsg *NetworkSecurityGroup) network.SecurityRule {
+	direction := "Inbound"
+	if *e.Egress {
+		direction = "Outbound"
+	}
+	sr := network.SecurityRule{
+		Name: e.Name,
+		SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
+			Protocol:             network.SecurityRuleProtocol(*e.Protocol),
+			Priority:             e.Priority,
+			Access:               network.SecurityRuleAccess(*e.AccessType),
+			Direction:            network.SecurityRuleDirection(direction),
+			SourcePortRange:      e.FromPort,
+			DestinationPortRange: e.ToPort,
+		},
+	}
+
+	if e.SourceApplicationSecurityGroups != nil && e.DestinationApplicationSecurityGroups != nil {
+		var sourceAsg = []network.ApplicationSecurityGroup{}
+		var destinationAsg = []network.ApplicationSecurityGroup{}
+
+		for _, group := range *e.SourceApplicationSecurityGroups {
+			var applicationSecurityGroupID = ApplicationSecurityGroupID{
+				SubscriptionID:               t.Cloud.SubscriptionID(),
+				ResourceGroupName:            *nsg.ResourceGroup.Name,
+				ApplicationSecurityGroupName: *group.Name,
+			}
+
+			asg := network.ApplicationSecurityGroup{ID: to.StringPtr(applicationSecurityGroupID.String())}
+			sourceAsg = append(sourceAsg, asg)
+		}
+
+		for _, group := range *e.DestinationApplicationSecurityGroups {
+			var applicationSecurityGroupID = ApplicationSecurityGroupID{
+				SubscriptionID:               t.Cloud.SubscriptionID(),
+				ResourceGroupName:            *nsg.ResourceGroup.Name,
+				ApplicationSecurityGroupName: *group.Name,
+			}
+
+			asg := network.ApplicationSecurityGroup{ID: to.StringPtr(applicationSecurityGroupID.String())}
+			destinationAsg = append(destinationAsg, asg)
+		}
+
+		sr.SourceApplicationSecurityGroups = &sourceAsg
+		sr.DestinationApplicationSecurityGroups = &destinationAsg
+	}
+
+	if e.SourceCIDRs != nil {
+		sr.SourceAddressPrefixes = e.SourceCIDRs
+	}
+
+	if e.DestinationCIDRs != nil {
+		sr.DestinationAddressPrefixes = e.DestinationCIDRs
+	}
+
+	if e.SourceCIDR != nil {
+		sr.SourceAddressPrefix = e.SourceCIDR
+	}
+
+	if e.DestinationCIDR != nil {
+		sr.DestinationAddressPrefix = e.DestinationCIDR
+	}
+
+	return sr
 }

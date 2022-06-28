@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	"k8s.io/klog"
 	"k8s.io/kops/pkg/apis/kops"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/azuretasks"
@@ -80,23 +79,9 @@ func (b *FirewallModelBuilder) buildNodeRules(c *fi.ModelBuilderContext) ([]Appl
 	return asgNodeGroups, nil
 }
 
-func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNodeGroups []ApplicationSecurityGroupInfo) error {
-	nsgMasterGroups, asgMasterGroups, err := b.GetSecurityGroups(kops.InstanceGroupRoleMaster)
-	if err != nil {
-		return err
-	}
+func (b *FirewallModelBuilder) getSecurityRules(c *fi.ModelBuilderContext, asgMasterGroups []ApplicationSecurityGroupInfo, asgNodeGroups []ApplicationSecurityGroupInfo) []*azuretasks.SecurityGroupRule {
 
-	for _, group := range nsgMasterGroups {
-		group.Task.Lifecycle = b.Lifecycle
-		group.Task.ResourceGroup = b.LinkToResourceGroup()
-		c.AddTask(group.Task)
-	}
-
-	for _, group := range asgMasterGroups {
-		group.Task.Lifecycle = b.Lifecycle
-		group.Task.ResourceGroup = b.LinkToResourceGroup()
-		c.AddTask(group.Task)
-	}
+	var securityGroupRules = []*azuretasks.SecurityGroupRule{}
 
 	// Masters can talk to masters
 	var masterSourceASGs = []azuretasks.ApplicationSecurityGroup{}
@@ -106,29 +91,27 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 		masterDestinationASGs = append(masterDestinationASGs, *asg.Task)
 	}
 
-	var priority int32
-	priority = baseSGRulePriorityMasterToMaster
-	for _, nsg := range nsgMasterGroups {
-		priority = priority + 1
-		t := &azuretasks.SecurityGroupRule{
-			Name:                                 fi.String("master-to-master-" + *nsg.Task.Name),
-			Lifecycle:                            b.Lifecycle,
-			ResourceGroup:                        b.LinkToResourceGroup(),
-			SourceApplicationSecurityGroups:      &masterSourceASGs,
-			DestinationApplicationSecurityGroups: &masterDestinationASGs,
-			NetworkSecurityGroup:                 nsg.Task,
-			Protocol:                             to.StringPtr("*"),
-			AccessType:                           to.StringPtr("Allow"),
-			Egress:                               to.BoolPtr(false),
-			ToPort:                               to.StringPtr("*"),
-			FromPort:                             to.StringPtr("*"),
-			Priority:                             to.Int32Ptr(priority),
-		}
-		AddDirectionalGroupRule(c, t)
-		b.sshAccessMaster(c, nsg, sGRulePriorityMasterSSHAccess) // add security group rules to allow SSH access to master nodes. One for each master node
-		if b.Cluster.Spec.API.LoadBalancer.Type == kops.LoadBalancerTypePublic {
-			b.publicApiServerAccess(c, nsg, sGRulePriorityMasterApiServerPublicAccess) // add security group rules to allow external access to API server via 443
-		}
+	var priority int32 = baseSGRulePriorityMasterToMaster
+	rule := &azuretasks.SecurityGroupRule{
+		Name:                                 fi.String("master-to-master"),
+		SourceApplicationSecurityGroups:      &masterSourceASGs,
+		DestinationApplicationSecurityGroups: &masterDestinationASGs,
+		Protocol:                             to.StringPtr("*"),
+		AccessType:                           to.StringPtr("Allow"),
+		Egress:                               to.BoolPtr(false),
+		ToPort:                               to.StringPtr("*"),
+		FromPort:                             to.StringPtr("*"),
+		Priority:                             to.Int32Ptr(priority),
+	}
+
+	securityGroupRules = append(securityGroupRules, rule)
+
+	sshRule := b.sshAccessMaster(c, sGRulePriorityMasterSSHAccess) // add security group rules to allow SSH access to master nodes. One for each master node
+	securityGroupRules = append(securityGroupRules, sshRule)
+
+	if b.Cluster.Spec.API.LoadBalancer.Type == kops.LoadBalancerTypePublic {
+		apiRule := b.publicApiServerAccess(c, sGRulePriorityMasterApiServerPublicAccess) // add security group rules to allow external access to API server via 443
+		securityGroupRules = append(securityGroupRules, apiRule)
 	}
 
 	// Masters can talk to nodes
@@ -142,24 +125,20 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 	}
 
 	priority = baseSGRulePriorityMasterToNode
-	for _, nsg := range nsgMasterGroups {
-		priority = priority + 1
-		t := &azuretasks.SecurityGroupRule{
-			Name:                                 fi.String("master-to-node-" + *nsg.Task.Name),
-			Lifecycle:                            b.Lifecycle,
-			ResourceGroup:                        b.LinkToResourceGroup(),
-			SourceApplicationSecurityGroups:      &sourceASGsMasterNode,
-			DestinationApplicationSecurityGroups: &destinationASGsMasterNode,
-			NetworkSecurityGroup:                 nsg.Task,
-			Protocol:                             to.StringPtr("*"),
-			AccessType:                           to.StringPtr("Allow"),
-			Egress:                               to.BoolPtr(false),
-			ToPort:                               to.StringPtr("*"),
-			FromPort:                             to.StringPtr("*"),
-			Priority:                             to.Int32Ptr(priority),
-		}
-		AddDirectionalGroupRule(c, t)
+
+	rule = &azuretasks.SecurityGroupRule{
+		Name:                                 fi.String("master-to-node"),
+		SourceApplicationSecurityGroups:      &sourceASGsMasterNode,
+		DestinationApplicationSecurityGroups: &destinationASGsMasterNode,
+		Protocol:                             to.StringPtr("*"),
+		AccessType:                           to.StringPtr("Allow"),
+		Egress:                               to.BoolPtr(false),
+		ToPort:                               to.StringPtr("*"),
+		FromPort:                             to.StringPtr("*"),
+		Priority:                             to.Int32Ptr(priority),
 	}
+
+	securityGroupRules = append(securityGroupRules, rule)
 
 	// Nodes can talk to nodes
 	var nodeSourceASGs = []azuretasks.ApplicationSecurityGroup{}
@@ -170,63 +149,76 @@ func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNo
 	}
 
 	priority = baseSGRulePriorityNodeToNode
-	for _, nsg := range nsgMasterGroups {
-		priority = priority + 1
-		t := &azuretasks.SecurityGroupRule{
-			Name:                                 fi.String("node-to-node-" + *nsg.Task.Name),
-			Lifecycle:                            b.Lifecycle,
-			ResourceGroup:                        b.LinkToResourceGroup(),
-			SourceApplicationSecurityGroups:      &nodeSourceASGs,
-			DestinationApplicationSecurityGroups: &nodeDestinationASGs,
-			NetworkSecurityGroup:                 nsg.Task,
-			Protocol:                             to.StringPtr("*"),
-			AccessType:                           to.StringPtr("Allow"),
-			Egress:                               to.BoolPtr(false),
-			ToPort:                               to.StringPtr("*"),
-			FromPort:                             to.StringPtr("*"),
-			Priority:                             to.Int32Ptr(priority),
-		}
-		AddDirectionalGroupRule(c, t)
+	rule = &azuretasks.SecurityGroupRule{
+		Name:                                 fi.String("node-to-node"),
+		SourceApplicationSecurityGroups:      &nodeSourceASGs,
+		DestinationApplicationSecurityGroups: &nodeDestinationASGs,
+		Protocol:                             to.StringPtr("*"),
+		AccessType:                           to.StringPtr("Allow"),
+		Egress:                               to.BoolPtr(false),
+		ToPort:                               to.StringPtr("*"),
+		FromPort:                             to.StringPtr("*"),
+		Priority:                             to.Int32Ptr(priority),
 	}
+
+	securityGroupRules = append(securityGroupRules, rule)
+
+	return securityGroupRules
+}
+
+func (b *FirewallModelBuilder) buildMasterRules(c *fi.ModelBuilderContext, asgNodeGroups []ApplicationSecurityGroupInfo) error {
+	nsgMasterGroups, asgMasterGroups, err := b.GetSecurityGroups(kops.InstanceGroupRoleMaster)
+	if err != nil {
+		return err
+	}
+
+	for _, group := range asgMasterGroups {
+		group.Task.Lifecycle = b.Lifecycle
+		group.Task.ResourceGroup = b.LinkToResourceGroup()
+		c.AddTask(group.Task)
+	}
+
+	for _, group := range nsgMasterGroups {
+		group.Task.Lifecycle = b.Lifecycle
+		group.Task.ResourceGroup = b.LinkToResourceGroup()
+		group.Task.Rules = b.getSecurityRules(c, asgMasterGroups, asgNodeGroups)
+		c.AddTask(group.Task)
+	}
+
 	return nil
 }
 
-func (b *FirewallModelBuilder) sshAccessMaster(c *fi.ModelBuilderContext, nsg NetworkSecurityGroupInfo, priority int32) {
-	t := &azuretasks.SecurityGroupRule{
-		Name:                 fi.String("ssh-to-master-" + *nsg.Task.Name),
-		Lifecycle:            b.Lifecycle,
-		ResourceGroup:        b.LinkToResourceGroup(),
-		SourceCIDRs:          to.StringSlicePtr(b.Cluster.Spec.SSHAccess),
-		DestinationCIDR:      to.StringPtr("VirtualNetwork"),
-		NetworkSecurityGroup: nsg.Task,
-		Protocol:             to.StringPtr("TCP"),
-		AccessType:           to.StringPtr("Allow"),
-		Egress:               to.BoolPtr(false),
-		ToPort:               to.StringPtr("22"),
-		FromPort:             to.StringPtr("*"),
-		Priority:             to.Int32Ptr(priority),
+func (b *FirewallModelBuilder) sshAccessMaster(c *fi.ModelBuilderContext, priority int32) *azuretasks.SecurityGroupRule {
+	rule := &azuretasks.SecurityGroupRule{
+		Name:            fi.String("ssh-to-master"),
+		SourceCIDRs:     to.StringSlicePtr(b.Cluster.Spec.SSHAccess),
+		DestinationCIDR: to.StringPtr("VirtualNetwork"),
+		Protocol:        to.StringPtr("TCP"),
+		AccessType:      to.StringPtr("Allow"),
+		Egress:          to.BoolPtr(false),
+		ToPort:          to.StringPtr("22"),
+		FromPort:        to.StringPtr("*"),
+		Priority:        to.Int32Ptr(priority),
 	}
-	AddDirectionalGroupRule(c, t)
+
+	return rule
 }
 
-func (b *FirewallModelBuilder) publicApiServerAccess(c *fi.ModelBuilderContext, nsg NetworkSecurityGroupInfo, priority int32) {
+func (b *FirewallModelBuilder) publicApiServerAccess(c *fi.ModelBuilderContext, priority int32) *azuretasks.SecurityGroupRule {
 
-	t := &azuretasks.SecurityGroupRule{
-		Name:            fi.String("public-api-server-access-" + *nsg.Task.Name),
-		Lifecycle:       b.Lifecycle,
-		ResourceGroup:   b.LinkToResourceGroup(),
+	rule := &azuretasks.SecurityGroupRule{
+		Name:            fi.String("public-api-server-access"),
 		SourceCIDR:      to.StringPtr("Internet"),
 		DestinationCIDR: to.StringPtr("VirtualNetwork"),
-
-		NetworkSecurityGroup: nsg.Task,
-		Protocol:             to.StringPtr("TCP"),
-		AccessType:           to.StringPtr("Allow"),
-		Egress:               to.BoolPtr(false),
-		ToPort:               to.StringPtr("443"),
-		FromPort:             to.StringPtr("*"),
-		Priority:             to.Int32Ptr(priority),
+		Protocol:        to.StringPtr("TCP"),
+		AccessType:      to.StringPtr("Allow"),
+		Egress:          to.BoolPtr(false),
+		ToPort:          to.StringPtr("443"),
+		FromPort:        to.StringPtr("*"),
+		Priority:        to.Int32Ptr(priority),
 	}
-	AddDirectionalGroupRule(c, t)
+
+	return rule
 }
 
 func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]NetworkSecurityGroupInfo,
@@ -333,9 +325,4 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 		Task: asgBaseGroup,
 	})
 	return nsgGroups, asgGroups, nil
-}
-
-func AddDirectionalGroupRule(c *fi.ModelBuilderContext, t *azuretasks.SecurityGroupRule) {
-	klog.V(8).Infof("Adding rule %v", t.Name)
-	c.AddTask(t)
 }

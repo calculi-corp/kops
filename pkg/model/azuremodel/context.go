@@ -64,7 +64,13 @@ func (c *AzureModelContext) LinkToAzureSubnet(spec *kops.ClusterSubnetSpec) *azu
 
 // NameForRouteTable returns the name of the Route Table object for the cluster.
 func (c *AzureModelContext) NameForRouteTable() string {
-	return c.Cluster.Spec.CloudProvider.Azure.RouteTableName
+	tableName := c.Cluster.Spec.CloudProvider.Azure.RouteTableName
+
+	if tableName == "" {
+		tableName = "routetable-" + c.ClusterName()
+	}
+
+	return tableName
 }
 
 // LinkToLoadBalancer returns the Load Balancer object for the cluster.

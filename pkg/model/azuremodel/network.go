@@ -56,14 +56,20 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 		c.AddTask(subnetTask)
 	}
 
-	rtTask := &azuretasks.RouteTable{
-		Name:          fi.String(b.NameForRouteTable()),
-		Lifecycle:     b.Lifecycle,
-		ResourceGroup: b.LinkToResourceGroup(),
-		Tags:          map[string]*string{},
-		Shared:        fi.Bool(b.Cluster.IsSharedAzureRouteTable()),
+	// If route table name is provided (--azure-route-table-name <name>) we assume that it is exists,
+	// so we only add subnets associations
+	if !b.Cluster.IsSharedAzureRouteTable() && !b.Cluster.SharedVPC() {
+
+		rtTask := &azuretasks.RouteTable{
+			Name:          fi.String(b.NameForRouteTable()),
+			Lifecycle:     b.Lifecycle,
+			ResourceGroup: b.LinkToResourceGroup(),
+			Tags:          map[string]*string{},
+			Shared:        fi.Bool(b.Cluster.IsSharedAzureRouteTable()),
+		}
+
+		c.AddTask(rtTask)
 	}
-	c.AddTask(rtTask)
 
 	return nil
 }

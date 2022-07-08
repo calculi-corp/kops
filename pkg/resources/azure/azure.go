@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
 	authz "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization"
@@ -43,6 +44,7 @@ const (
 	typePublicIPAddress          = "PublicIPAddress"
 	typeApplicationSecurityGroup = "ApplicationSecurityGroup"
 	typeNetworkSecurityGroup     = "SecurityGroup"
+	typeDNSZone                  = "DNSZone"
 )
 
 // ListResourcesAzure lists all resources for the cluster by quering Azure.
@@ -95,6 +97,7 @@ func (g *resourceGetter) listAll() ([]*resources.Resource, error) {
 		g.listPublicIPAddresses,
 		g.listApplicationSecurityGroups,
 		g.listNetworkSecurityGroups,
+		g.listDNSZones,
 	}
 
 	var resources []*resources.Resource
@@ -532,6 +535,38 @@ func (g *resourceGetter) toNetworkSecurityGroupResource(networkSecurityGroup *ne
 
 func (g *resourceGetter) deleteNetworkSecurityGroup(_ fi.Cloud, r *resources.Resource) error {
 	return g.cloud.NetworkSecurityGroup().Delete(context.TODO(), g.resourceGroupName(), r.Name)
+}
+
+func (g *resourceGetter) listDNSZones(ctx context.Context) ([]*resources.Resource, error) {
+	zones, err := g.cloud.DNSZone().List(ctx, g.resourceGroupName())
+	if err != nil {
+		return nil, err
+	}
+
+	var rs []*resources.Resource
+	for i := range zones {
+		p := &zones[i]
+		if !g.isOwnedByCluster(p.Tags) {
+			continue
+		}
+		rs = append(rs, g.toDNSZoneResource(p))
+	}
+	return rs, nil
+}
+
+func (g *resourceGetter) toDNSZoneResource(dnsZone *armdns.Zone) *resources.Resource {
+	return &resources.Resource{
+		Obj:     dnsZone,
+		Type:    typeDNSZone,
+		ID:      *dnsZone.Name,
+		Name:    *dnsZone.Name,
+		Deleter: g.deleteDNSZone,
+		Blocks:  []string{toKey(typeResourceGroup, g.resourceGroupName())},
+	}
+}
+
+func (g *resourceGetter) deleteDNSZone(_ fi.Cloud, r *resources.Resource) error {
+	return g.cloud.DNSZone().Delete(context.TODO(), g.resourceGroupName(), r.Name)
 }
 
 // isOwnedByCluster returns true if the resource is owned by the cluster.

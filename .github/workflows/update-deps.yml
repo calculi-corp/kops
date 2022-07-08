@@ -1,5 +1,8 @@
 name: "update-deps"
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 5"
 
 env:
   GOPROXY: https://proxy.golang.org
@@ -35,7 +38,4 @@ jobs:
           delete-branch: true
           labels: ok-to-test
           body: |
-            Updating go.mod with latest dependencies:
-            ```
-            ${{ steps.update_deps.outputs.changes }}
-            ```
+            Updating go.mod with latest dependencies...

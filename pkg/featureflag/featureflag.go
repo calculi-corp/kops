@@ -57,7 +57,7 @@ var (
 	// GoogleCloudBucketACL means the ACL will be set on a bucket when using GCS
 	GoogleCloudBucketACL = new("GoogleCloudBucketAcl", Bool(false))
 	// SpecOverrideFlag allows setting spec values on create
-	SpecOverrideFlag = new("SpecOverrideFlag", Bool(false))
+	SpecOverrideFlag = new("SpecOverrideFlag", Bool(true))
 	// Spotinst toggles the use of Spotinst integration.
 	Spotinst = new("Spotinst", Bool(false))
 	// SpotinstOcean toggles the use of Spotinst Ocean instance group implementation.
@@ -86,8 +86,6 @@ var (
 	UseAddonOperators = new("UseAddonOperators", Bool(false))
 	// TerraformManagedFiles enables rendering managed files into the Terraform configuration.
 	TerraformManagedFiles = new("TerraformManagedFiles", Bool(true))
-	// AlphaAllowGCE is a feature flag that gates GCE support while it is alpha.
-	AlphaAllowGCE = new("AlphaAllowGCE", Bool(false))
 	// Karpenter enables karpenter-managed Instance Groups
 	Karpenter = new("Karpenter", Bool(false))
 	// ImageDigest remaps all manifests with image digests

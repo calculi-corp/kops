@@ -18,7 +18,7 @@ require (
 	k8s.io/klog/v2 v2.70.1
 	k8s.io/kops v1.24.0-beta.2
 	sigs.k8s.io/boskos v0.0.0-20200710214748-f5935686c7fc
-	sigs.k8s.io/kubetest2 v0.0.0-20220411203323-036d47c48813
+	sigs.k8s.io/kubetest2 v0.0.0-20220625123257-6d8d7ca3e95c
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -140,7 +140,7 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
-	golang.org/x/net v0.0.0-20220706163947-c90051bbdb60 // indirect
+	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/oauth2 v0.0.0-20220630143837-2104d58473e0 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
@@ -158,7 +158,6 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42 // indirect
 	k8s.io/release v0.7.1-0.20210204090829-09fb5e3883b8 // indirect
 	k8s.io/test-infra v0.0.0-20200617221206-ea73eaeab7ff // indirect

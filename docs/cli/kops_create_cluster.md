@@ -73,7 +73,7 @@ kops create cluster [CLUSTER] [flags]
       --authorization string             Authorization mode: AlwaysAllow or RBAC (default "RBAC")
       --bastion                          Enable a bastion instance group. Only applies to private topology.
       --channel string                   Channel for default versions and configuration to use (default "stable")
-      --cloud string                     Cloud provider to use - aws, digitalocean, openstack
+      --cloud string                     Cloud provider to use - aws, digitalocean, gce, openstack
       --cloud-labels string              A list of key/value pairs used to tag all instance groups (for example "Owner=John Doe,Team=Some Team").
       --container-runtime string         Container runtime to use: containerd, docker
       --disable-subnet-tags              Disable automatic subnet tagging
@@ -115,11 +115,13 @@ kops create cluster [CLUSTER] [flags]
       --out string                       Path to write any local output
   -o, --output string                    Output format. One of json or yaml. Used with the --dry-run flag.
       --project string                   Project to use (must be set on GCE)
+      --set strings                      Directly set values in the spec
       --ssh-access strings               Restrict SSH access to this CIDR.  If not set, uses the value of the admin-access flag.
       --ssh-public-key string            SSH public key to use
       --subnets strings                  Shared subnets to use
       --target string                    Valid targets: direct, terraform, cloudformation. Set this flag to terraform if you want kOps to generate terraform (default "direct")
   -t, --topology string                  Network topology for the cluster: public or private (default "public")
+      --unset strings                    Directly unset values in the spec
       --utility-subnets strings          Shared utility subnets to use
       --vpc string                       Shared VPC to use
   -y, --yes                              Specify --yes to immediately create the cluster
@@ -130,19 +132,19 @@ kops create cluster [CLUSTER] [flags]
 
 ```
       --add_dir_header                   If true, adds the file directory to the header of the log messages
-      --alsologtostderr                  log to standard error as well as files
+      --alsologtostderr                  log to standard error as well as files (no effect when -logtostderr=true)
       --config string                    yaml config file (default is $HOME/.kops.yaml)
       --log_backtrace_at traceLocation   when logging hits line file:N, emit a stack trace (default :0)
-      --log_dir string                   If non-empty, write log files in this directory
-      --log_file string                  If non-empty, use this log file
-      --log_file_max_size uint           Defines the maximum size a log file can grow to. Unit is megabytes. If the value is 0, the maximum file size is unlimited. (default 1800)
+      --log_dir string                   If non-empty, write log files in this directory (no effect when -logtostderr=true)
+      --log_file string                  If non-empty, use this log file (no effect when -logtostderr=true)
+      --log_file_max_size uint           Defines the maximum size a log file can grow to (no effect when -logtostderr=true). Unit is megabytes. If the value is 0, the maximum file size is unlimited. (default 1800)
       --logtostderr                      log to standard error instead of files (default true)
       --name string                      Name of cluster. Overrides KOPS_CLUSTER_NAME environment variable
-      --one_output                       If true, only write logs to their native severity level (vs also writing to each lower severity level)
+      --one_output                       If true, only write logs to their native severity level (vs also writing to each lower severity level; no effect when -logtostderr=true)
       --skip_headers                     If true, avoid header prefixes in the log messages
-      --skip_log_headers                 If true, avoid headers when opening log files
+      --skip_log_headers                 If true, avoid headers when opening log files (no effect when -logtostderr=true)
       --state string                     Location of state storage (kops 'config' file). Overrides KOPS_STATE_STORE environment variable
-      --stderrthreshold severity         logs at or above this threshold go to stderr (default 2)
+      --stderrthreshold severity         logs at or above this threshold go to stderr when writing to files and stderr (no effect when -logtostderr=true or -alsologtostderr=false) (default 2)
   -v, --v Level                          number for the log level verbosity
       --vmodule moduleSpec               comma-separated list of pattern=N settings for file-filtered logging
 ```

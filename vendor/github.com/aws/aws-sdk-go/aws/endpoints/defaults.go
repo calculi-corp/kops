@@ -1506,42 +1506,6 @@ var awsPartition = partition{
 				},
 			},
 		},
-		"api.iotdeviceadvisor": service{
-			Endpoints: serviceEndpoints{
-				endpointKey{
-					Region: "ap-northeast-1",
-				}: endpoint{
-					Hostname: "api.iotdeviceadvisor.ap-northeast-1.amazonaws.com",
-					CredentialScope: credentialScope{
-						Region: "ap-northeast-1",
-					},
-				},
-				endpointKey{
-					Region: "eu-west-1",
-				}: endpoint{
-					Hostname: "api.iotdeviceadvisor.eu-west-1.amazonaws.com",
-					CredentialScope: credentialScope{
-						Region: "eu-west-1",
-					},
-				},
-				endpointKey{
-					Region: "us-east-1",
-				}: endpoint{
-					Hostname: "api.iotdeviceadvisor.us-east-1.amazonaws.com",
-					CredentialScope: credentialScope{
-						Region: "us-east-1",
-					},
-				},
-				endpointKey{
-					Region: "us-west-2",
-				}: endpoint{
-					Hostname: "api.iotdeviceadvisor.us-west-2.amazonaws.com",
-					CredentialScope: credentialScope{
-						Region: "us-west-2",
-					},
-				},
-			},
-		},
 		"api.iotwireless": service{
 			Endpoints: serviceEndpoints{
 				endpointKey{
@@ -4079,9 +4043,6 @@ var awsPartition = partition{
 				}: endpoint{},
 				endpointKey{
 					Region: "ap-southeast-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-southeast-3",
 				}: endpoint{},
 				endpointKey{
 					Region: "ca-central-1",
@@ -15204,14 +15165,6 @@ var awsPartition = partition{
 					},
 				},
 				endpointKey{
-					Region: "eu-south-1",
-				}: endpoint{
-					Hostname: "oidc.eu-south-1.amazonaws.com",
-					CredentialScope: credentialScope{
-						Region: "eu-south-1",
-					},
-				},
-				endpointKey{
 					Region: "eu-west-1",
 				}: endpoint{
 					Hostname: "oidc.eu-west-1.amazonaws.com",
@@ -16839,43 +16792,6 @@ var awsPartition = partition{
 				},
 			},
 		},
-		"redshift-serverless": service{
-			Endpoints: serviceEndpoints{
-				endpointKey{
-					Region: "ap-northeast-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-northeast-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-southeast-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-southeast-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-central-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-north-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-west-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-west-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "us-east-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "us-east-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "us-west-2",
-				}: endpoint{},
-			},
-		},
 		"rekognition": service{
 			Endpoints: serviceEndpoints{
 				endpointKey{
@@ -17342,67 +17258,6 @@ var awsPartition = partition{
 				}: endpoint{},
 				endpointKey{
 					Region: "us-east-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "us-west-2",
-				}: endpoint{},
-			},
-		},
-		"rolesanywhere": service{
-			Endpoints: serviceEndpoints{
-				endpointKey{
-					Region: "ap-east-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-northeast-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-northeast-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-northeast-3",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-south-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-southeast-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "ap-southeast-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "ca-central-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-central-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-north-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-west-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-west-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "eu-west-3",
-				}: endpoint{},
-				endpointKey{
-					Region: "me-south-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "sa-east-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "us-east-1",
-				}: endpoint{},
-				endpointKey{
-					Region: "us-east-2",
-				}: endpoint{},
-				endpointKey{
-					Region: "us-west-1",
 				}: endpoint{},
 				endpointKey{
 					Region: "us-west-2",
@@ -28298,15 +28153,6 @@ var awsusgovPartition = partition{
 		"lakeformation": service{
 			Endpoints: serviceEndpoints{
 				endpointKey{
-					Region: "fips-us-gov-east-1",
-				}: endpoint{
-					Hostname: "lakeformation-fips.us-gov-east-1.amazonaws.com",
-					CredentialScope: credentialScope{
-						Region: "us-gov-east-1",
-					},
-					Deprecated: boxedTrue,
-				},
-				endpointKey{
 					Region: "fips-us-gov-west-1",
 				}: endpoint{
 					Hostname: "lakeformation-fips.us-gov-west-1.amazonaws.com",
@@ -28314,15 +28160,6 @@ var awsusgovPartition = partition{
 						Region: "us-gov-west-1",
 					},
 					Deprecated: boxedTrue,
-				},
-				endpointKey{
-					Region: "us-gov-east-1",
-				}: endpoint{},
-				endpointKey{
-					Region:  "us-gov-east-1",
-					Variant: fipsVariant,
-				}: endpoint{
-					Hostname: "lakeformation-fips.us-gov-east-1.amazonaws.com",
 				},
 				endpointKey{
 					Region: "us-gov-west-1",

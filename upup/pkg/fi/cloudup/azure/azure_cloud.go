@@ -58,6 +58,7 @@ type AzureCloud interface {
 	ApplicationSecurityGroup() ApplicationSecurityGroupClient
 	NetworkSecurityGroup() NetworkSecurityGroupClient
 	SecurityRules() SecurityRulesClient
+	DNSZone() DNSZoneClient
 }
 
 type azureCloudImplementation struct {
@@ -78,6 +79,7 @@ type azureCloudImplementation struct {
 	applicationSecurityGroupClient ApplicationSecurityGroupClient
 	networkSecurityGroupClient     NetworkSecurityGroupClient
 	securityRulesClient            SecurityRulesClient
+	dnsZoneClient                  DNSZoneClient
 }
 
 var _ fi.Cloud = &azureCloudImplementation{}
@@ -107,6 +109,7 @@ func NewAzureCloud(subscriptionID, location string, tags map[string]string) (Azu
 		applicationSecurityGroupClient: newApplicationSecurityGroupClientImpl(subscriptionID, authorizer),
 		networkSecurityGroupClient:     newNetworkSecurityGroupClientImpl(subscriptionID, authorizer),
 		securityRulesClient:            newSecurityRulesClientImpl(subscriptionID, authorizer),
+		dnsZoneClient:                  newDNSZoneClientImpl(subscriptionID, authorizer),
 	}, nil
 }
 
@@ -321,4 +324,8 @@ func (c *azureCloudImplementation) NetworkSecurityGroup() NetworkSecurityGroupCl
 
 func (c *azureCloudImplementation) SecurityRules() SecurityRulesClient {
 	return c.securityRulesClient
+}
+
+func (c *azureCloudImplementation) DNSZone() DNSZoneClient {
+	return c.dnsZoneClient
 }

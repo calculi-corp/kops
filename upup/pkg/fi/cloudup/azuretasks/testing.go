@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
 
@@ -62,6 +63,7 @@ type MockAzureCloud struct {
 	ApplicationSecurityGroupClient *MockApplicationSecurityGroupClient
 	NetworkSecurityGroupClient     *MockNetworkSecurityGroupClient
 	SecurityRulesClient            *MockSecurityRulesClient
+	DNSZoneClient                  *MockDNSZoneClient
 }
 
 var _ azure.AzureCloud = &MockAzureCloud{}
@@ -111,6 +113,9 @@ func NewMockAzureCloud(location string) *MockAzureCloud {
 		},
 		SecurityRulesClient: &MockSecurityRulesClient{
 			SecurityRules: map[string]network.SecurityRule{},
+		},
+		DNSZoneClient: &MockDNSZoneClient{
+			DNSZones: map[string]armdns.Zone{},
 		},
 	}
 }
@@ -253,9 +258,14 @@ func (c *MockAzureCloud) NetworkSecurityGroup() azure.NetworkSecurityGroupClient
 	return c.NetworkSecurityGroupClient
 }
 
-// SecurityRulereturns the network security rules client.
+// SecurityRules returns the network security rules client.
 func (c *MockAzureCloud) SecurityRules() azure.SecurityRulesClient {
 	return c.SecurityRulesClient
+}
+
+// SecurityRulereturns the network security rules client.
+func (c *MockAzureCloud) DNSZone() azure.DNSZoneClient {
+	return c.DNSZoneClient
 }
 
 // MockResourceGroupsClient is a mock implementation of resource group client.
@@ -711,7 +721,7 @@ type MockSecurityRulesClient struct {
 
 var _ azure.SecurityRulesClient = &MockSecurityRulesClient{}
 
-// CreateOrUpdate creates a new network security group.
+// CreateOrUpdate creates a new network security rule.
 func (c *MockSecurityRulesClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, networkSecurityGroupName string, securityRuleName string, parameters network.SecurityRule) error {
 	key := fmt.Sprintf("%s::%s::%s", resourceGroupName, networkSecurityGroupName, securityRuleName)
 	if _, ok := c.SecurityRules[key]; ok {
@@ -722,7 +732,7 @@ func (c *MockSecurityRulesClient) CreateOrUpdate(ctx context.Context, resourceGr
 	return nil
 }
 
-// List returns a slice of network security groups.
+// List returns a slice of network security rules.
 func (c *MockSecurityRulesClient) List(ctx context.Context, resourceGroupName string, networkSecurityGroupName string) ([]network.SecurityRule, error) {
 	var l []network.SecurityRule
 	for k, v := range c.SecurityRules {
@@ -734,7 +744,7 @@ func (c *MockSecurityRulesClient) List(ctx context.Context, resourceGroupName st
 	return l, nil
 }
 
-// Delete deletes a specified public ip address.
+// Delete deletes a specified network security rule.
 func (c *MockSecurityRulesClient) Delete(ctx context.Context, resourceGroupName, networkSecurityGroupName string, securityRuleName string) error {
 	key := fmt.Sprintf("%s::%s::%s", resourceGroupName, networkSecurityGroupName, securityRuleName)
 
@@ -742,5 +752,40 @@ func (c *MockSecurityRulesClient) Delete(ctx context.Context, resourceGroupName,
 		return fmt.Errorf("%s does not exist", securityRuleName)
 	}
 	delete(c.SecurityRules, key)
+	return nil
+}
+
+// MockDNSZoneClient is a mock implementation of DNS zone client
+type MockDNSZoneClient struct {
+	DNSZones map[string]armdns.Zone
+}
+
+var _ azure.DNSZoneClient = &MockDNSZoneClient{}
+
+// CreateOrUpdate creates a new DNS zone.
+func (c *MockDNSZoneClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, zoneName string, parameters armdns.Zone, options *armdns.ZonesClientCreateOrUpdateOptions) error {
+	if _, ok := c.DNSZones[zoneName]; ok {
+		return nil
+	}
+	parameters.Name = &zoneName
+	c.DNSZones[zoneName] = parameters
+	return nil
+}
+
+// List returns a slice of dns zones.
+func (c *MockDNSZoneClient) List(ctx context.Context, resourceGroupName string) ([]armdns.Zone, error) {
+	var l []armdns.Zone
+	for _, zone := range c.DNSZones {
+		l = append(l, zone)
+	}
+	return l, nil
+}
+
+// Delete deletes a specified network security rule.
+func (c *MockDNSZoneClient) Delete(ctx context.Context, resourceGroupName, zoneName string) error {
+	if _, ok := c.DNSZones[zoneName]; !ok {
+		return fmt.Errorf("%s does not exist", zoneName)
+	}
+	delete(c.DNSZones, zoneName)
 	return nil
 }

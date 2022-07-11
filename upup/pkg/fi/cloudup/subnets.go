@@ -25,6 +25,7 @@ import (
 	"k8s.io/kops/pkg/apis/kops"
 	"k8s.io/kops/pkg/util/subnet"
 	"k8s.io/kops/upup/pkg/fi"
+	"k8s.io/kops/upup/pkg/fi/cloudup/azure"
 )
 
 // ByZone implements sort.Interface for []*ClusterSubnetSpec based on
@@ -43,6 +44,14 @@ func (a ByZone) Less(i, j int) bool {
 	return a[i].Zone < a[j].Zone
 }
 
+func findVPCInfo(c *kops.Cluster, cloud fi.Cloud) (*fi.VPCInfo, error) {
+	if c.Spec.GetCloudProvider() == kops.CloudProviderAzure {
+		return cloud.(azure.AzureCloud).FindVNetInfo(c.Spec.NetworkID, c.Spec.CloudProvider.Azure.ResourceGroupName)
+	} else {
+		return cloud.FindVPCInfo(c.Spec.NetworkID)
+	}
+}
+
 func assignCIDRsToSubnets(c *kops.Cluster, cloud fi.Cloud) error {
 	// TODO: We probably could query for the existing subnets & allocate appropriately
 	// for now we'll require users to set CIDRs themselves
@@ -54,7 +63,7 @@ func assignCIDRsToSubnets(c *kops.Cluster, cloud fi.Cloud) error {
 
 	if c.Spec.NetworkID != "" {
 
-		vpcInfo, err := cloud.FindVPCInfo(c.Spec.NetworkID)
+		vpcInfo, err := findVPCInfo(c, cloud)
 		if err != nil {
 			return err
 		}
@@ -64,7 +73,11 @@ func assignCIDRsToSubnets(c *kops.Cluster, cloud fi.Cloud) error {
 
 		subnetByID := make(map[string]*fi.SubnetInfo)
 		for _, subnetInfo := range vpcInfo.Subnets {
-			subnetByID[subnetInfo.ID] = subnetInfo
+			if c.Spec.GetCloudProvider() == kops.CloudProviderAzure {
+				subnetByID[subnetInfo.Name] = subnetInfo
+			} else {
+				subnetByID[subnetInfo.ID] = subnetInfo
+			}
 		}
 		for i := range c.Spec.Subnets {
 			subnet := &c.Spec.Subnets[i]
@@ -82,7 +95,8 @@ func assignCIDRsToSubnets(c *kops.Cluster, cloud fi.Cloud) error {
 					return fmt.Errorf("Subnet %q has configured CIDR %q, but the actual CIDR found was %q", subnet.ProviderID, subnet.CIDR, cloudSubnet.CIDR)
 				}
 
-				if subnet.Zone != cloudSubnet.Zone {
+				// ignore zones for azure subnets, they are regional
+				if subnet.Zone != cloudSubnet.Zone && c.Spec.GetCloudProvider() != kops.CloudProviderAzure {
 					return fmt.Errorf("Subnet %q has configured Zone %q, but the actual Zone found was %q", subnet.ProviderID, subnet.Zone, cloudSubnet.Zone)
 				}
 

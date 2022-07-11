@@ -67,6 +67,7 @@ type SubnetInfo struct {
 	ID   string
 	Zone string
 	CIDR string
+	Name string
 }
 
 // ApiIngressStatus represents the status of an ingress point:

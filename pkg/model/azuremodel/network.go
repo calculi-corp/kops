@@ -40,16 +40,17 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 		Tags:          map[string]*string{},
 		Shared:        fi.Bool(b.Cluster.SharedVPC()),
 	}
+
 	c.AddTask(networkTask)
 
 	for _, subnetSpec := range b.Cluster.Spec.Subnets {
 		subnetTask := &azuretasks.Subnet{
-			Name:                 fi.String(subnetSpec.Name),
+			Name:                 fi.String(b.NameForSubnet(&subnetSpec)),
 			Lifecycle:            b.Lifecycle,
 			ResourceGroup:        b.LinkToResourceGroup(),
 			VirtualNetwork:       b.LinkToVirtualNetwork(),
 			CIDR:                 fi.String(subnetSpec.CIDR),
-			Shared:               fi.Bool(b.Cluster.SharedVPC()),
+			Shared:               fi.Bool(len(subnetSpec.ProviderID) > 0),
 			RouteTable:           fi.String(b.NameForRouteTable()),
 			NetworkSecurityGroup: fi.String(b.SecurityGroupName(kops.InstanceGroupRoleMaster)),
 		}

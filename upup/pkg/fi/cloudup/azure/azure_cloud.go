@@ -129,13 +129,13 @@ func (c *azureCloudImplementation) FindVPCInfo(id string) (*fi.VPCInfo, error) {
 	return nil, errors.New("FindVPCInfo not implemented on azureCloud, use FindVNETInfo instead")
 }
 
-func (c *azureCloudImplementation) FindVNetInfo(id, resourceGroup string) (*fi.VPCInfo, error) {
+func (c *azureCloudImplementation) FindVNetInfo(name, resourceGroup string) (*fi.VPCInfo, error) {
 	vnets, err := c.vnetsClient.List(context.TODO(), resourceGroup)
 	if err != nil {
 		return nil, err
 	}
 	for _, vnet := range vnets {
-		if *vnet.ID != id {
+		if *vnet.Name != name {
 			continue
 		}
 		subnets := make([]*fi.SubnetInfo, 0)
@@ -143,6 +143,7 @@ func (c *azureCloudImplementation) FindVNetInfo(id, resourceGroup string) (*fi.V
 			subnets = append(subnets, &fi.SubnetInfo{
 				ID:   *subnet.ID,
 				CIDR: *subnet.AddressPrefix,
+				Name: *subnet.Name,
 			})
 		}
 		return &fi.VPCInfo{

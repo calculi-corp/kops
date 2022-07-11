@@ -19,6 +19,7 @@ package azure
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -153,10 +154,9 @@ func (g *resourceGetter) listVirtualNetworksAndSubnets(ctx context.Context) ([]*
 	var rs []*resources.Resource
 	for i := range vnets {
 		vnet := &vnets[i]
-		if !g.isOwnedByCluster(vnet.Tags) {
-			continue
+		if g.isOwnedByCluster(vnet.Tags) {
+			rs = append(rs, g.toVirtualNetworkResource(vnet))
 		}
-		rs = append(rs, g.toVirtualNetworkResource(vnet))
 		// Add all subnets belonging to the virtual network.
 		subnets, err := g.listSubnets(ctx, *vnet.Name)
 		if err != nil {
@@ -209,7 +209,7 @@ func (g *resourceGetter) toSubnetResource(subnet *network.Subnet, vnetName strin
 			toKey(typeVirtualNetwork, vnetName),
 			toKey(typeResourceGroup, g.resourceGroupName()),
 		},
-		Shared: g.cluster.SharedVPC(),
+		Shared: !strings.HasSuffix(*subnet.Name, g.cluster.Name),
 	}
 }
 

@@ -41,10 +41,20 @@ func (c *AzureModelContext) LinkToVirtualNetwork() *azuretasks.VirtualNetwork {
 // NameForVirtualNetwork returns the name of the Azure Virtual Network object the cluster is located in.
 func (c *AzureModelContext) NameForVirtualNetwork() string {
 	networkName := c.Cluster.Spec.NetworkID
+
 	if networkName == "" {
 		networkName = c.ClusterName()
 	}
 	return networkName
+}
+
+func (c *AzureModelContext) NameForSubnet(subnet *kops.ClusterSubnetSpec) string {
+	name := subnet.ProviderID
+
+	if name == "" {
+		name = subnet.Name + "-" + c.ClusterName()
+	}
+	return name
 }
 
 // LinkToResourceGroup returns the Resource Group object the cluster is located in.
@@ -59,7 +69,7 @@ func (c *AzureModelContext) NameForResourceGroup() string {
 
 // LinkToAzureSubnet returns the Azure Subnet object the cluster is located in.
 func (c *AzureModelContext) LinkToAzureSubnet(spec *kops.ClusterSubnetSpec) *azuretasks.Subnet {
-	return &azuretasks.Subnet{Name: fi.String(spec.Name)}
+	return &azuretasks.Subnet{Name: fi.String(c.NameForSubnet(spec))}
 }
 
 // NameForRouteTable returns the name of the Route Table object for the cluster.

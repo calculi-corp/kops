@@ -551,24 +551,16 @@ func setupZones(opt *NewClusterOptions, cluster *api.Cluster, allZones sets.Stri
 
 	case api.CloudProviderAzure:
 		// On Azure, subnets are regional - we create one per region, not per zone
-		for _, zoneName := range allZones.List() {
-			location, err := azure.ZoneToLocation(zoneName)
+		if len(opt.Zones) > 0 && len(opt.SubnetIDs) > 0 {
+
+			if len(opt.SubnetIDs) > 1 {
+				return nil, fmt.Errorf("on Azure only one subnet is supported, multiple provided")
+			}
+
+			zoneToSubnetProviderID, err = getAzureZoneToSubnetProviderID(cluster, opt.Zones[0][:len(opt.Zones[0])-1], cluster.Spec.NetworkID, opt.SubnetIDs[0], allZones.List())
 			if err != nil {
 				return nil, err
 			}
-
-			// We create default subnets named the same as the regions
-			subnetName := location
-
-			subnet := model.FindSubnet(cluster, subnetName)
-			if subnet == nil {
-				subnet = &api.ClusterSubnetSpec{
-					Name:   subnetName,
-					Region: location,
-				}
-				cluster.Spec.Subnets = append(cluster.Spec.Subnets, *subnet)
-			}
-			zoneToSubnetMap[zoneName] = subnet
 		}
 
 	case api.CloudProviderAWS:
@@ -592,14 +584,19 @@ func setupZones(opt *NewClusterOptions, cluster *api.Cluster, allZones sets.Stri
 
 	for _, zoneName := range allZones.List() {
 		// We create default subnets named the same as the zones
-		subnetName := zoneName
+		subnetName, region, err := getSubnetNameAndRegionForZone(zoneName, cluster.Spec.GetCloudProvider())
+
+		if err != nil {
+			return nil, err
+		}
 
 		subnet := model.FindSubnet(cluster, subnetName)
 		if subnet == nil {
 			subnet = &api.ClusterSubnetSpec{
 				Name:   subnetName,
-				Zone:   subnetName,
+				Zone:   zoneName,
 				Egress: opt.Egress,
+				Region: region, // for Azure region is equal to subnet name, for others it is empty
 			}
 			if subnetID, ok := zoneToSubnetProviderID[zoneName]; ok {
 				subnet.ProviderID = subnetID
@@ -610,6 +607,47 @@ func setupZones(opt *NewClusterOptions, cluster *api.Cluster, allZones sets.Stri
 	}
 
 	return zoneToSubnetMap, nil
+}
+
+func getSubnetNameAndRegionForZone(zoneName string, provider api.CloudProviderID) (string, string, error) {
+	// On Azure, subnets are regional - we create one per region, not per zone
+	if provider == api.CloudProviderAzure {
+		location, err := azure.ZoneToLocation(zoneName)
+		return location, location, err
+	} else {
+		return zoneName, "", nil
+	}
+}
+
+func getAzureZoneToSubnetProviderID(cluster *api.Cluster, region string, VPCID string, subnetID string, zones []string) (map[string]string, error) {
+	res := make(map[string]string)
+	cloudTags := map[string]string{}
+	azureCloud, err := azure.NewAzureCloud(cluster.Spec.CloudProvider.Azure.SubscriptionID, region, cloudTags)
+	if err != nil {
+		return res, fmt.Errorf("error loading cloud: %v", err)
+	}
+	vpcInfo, err := azureCloud.FindVNetInfo(VPCID, cluster.Spec.CloudProvider.Azure.ResourceGroupName)
+	if err != nil {
+		return res, fmt.Errorf("error describing VPC: %v", err)
+	}
+	if vpcInfo == nil {
+		return res, fmt.Errorf("VPC %q not found", VPCID)
+	}
+	subnetByID := make(map[string]*fi.SubnetInfo)
+	for _, subnetInfo := range vpcInfo.Subnets {
+		subnetByID[subnetInfo.Name] = subnetInfo
+	}
+
+	_, ok := subnetByID[subnetID]
+	if !ok {
+		return res, fmt.Errorf("subnet %s not found in VPC %s", subnetID, VPCID)
+	}
+
+	for _, zone := range zones {
+		res[zone] = subnetID
+	}
+
+	return res, nil
 }
 
 func getAWSZoneToSubnetProviderID(VPCID string, region string, subnetIDs []string) (map[string]string, error) {

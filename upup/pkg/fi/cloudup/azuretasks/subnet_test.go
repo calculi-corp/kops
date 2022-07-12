@@ -47,7 +47,7 @@ func TestSubnetRenderAzure(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	actual := cloud.SubnetsClient.Subnets[*expected.Name]
+	actual := cloud.SubnetsClient.Subnets["vnet-"+*expected.Name]
 	if a, e := *actual.Name, *expected.Name; a != e {
 		t.Errorf("unexpected name: expected %s, but got %s", e, a)
 	}

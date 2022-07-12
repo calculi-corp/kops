@@ -73,11 +73,8 @@ func TestListResourcesAzure(t *testing.T) {
 	}
 
 	subnets := cloud.SubnetsClient.Subnets
-	subnets[rgName] = network.Subnet{
+	subnets[vnetName+"-"+subnetName] = network.Subnet{
 		Name: to.StringPtr(subnetName),
-	}
-	vnets[irrelevantName] = network.VirtualNetwork{
-		Name: to.StringPtr(irrelevantName),
 	}
 
 	rts := cloud.RouteTablesClient.RTs
@@ -228,8 +225,9 @@ func TestListResourcesAzure(t *testing.T) {
 			blocks: []string{toKey(typeResourceGroup, rgName)},
 		},
 		toKey(typeSubnet, subnetName): {
-			rtype: typeSubnet,
-			name:  subnetName,
+			rtype:  typeSubnet,
+			name:   subnetName,
+			shared: true,
 			blocks: []string{
 				toKey(typeVirtualNetwork, vnetName),
 				toKey(typeResourceGroup, rgName),
@@ -269,6 +267,7 @@ func TestListResourcesAzure(t *testing.T) {
 			blocks: []string{toKey(typeResourceGroup, rgName)},
 		},
 	}
+
 	if !reflect.DeepEqual(a, e) {
 		t.Errorf("expected %+v, but got %+v", e, a)
 	}

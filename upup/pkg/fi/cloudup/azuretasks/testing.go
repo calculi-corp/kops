@@ -354,7 +354,7 @@ func (c *MockSubnetsClient) CreateOrUpdate(ctx context.Context, resourceGroupNam
 		return fmt.Errorf("update not supported")
 	}
 	parameters.Name = &subnetName
-	c.Subnets[subnetName] = parameters
+	c.Subnets[key] = parameters
 	return nil
 }
 

@@ -336,4 +336,3 @@ func (c *azureCloudImplementation) DNSZone() DNSZoneClient {
 func (c *azureCloudImplementation) RecordSet() RecordSetClient {
 	return c.recordSetClient
 }
-

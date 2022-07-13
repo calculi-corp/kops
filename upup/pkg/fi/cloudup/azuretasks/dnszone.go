@@ -145,7 +145,7 @@ func (*DNSZone) RenderAzure(t *azure.AzureAPITarget, a, e, changes *DNSZone) err
 	} else {
 		*zone.Properties.ZoneType = armdns.ZoneTypePublic
 	}
-	
+
 	return t.Cloud.DNSZone().CreateOrUpdate(
 		context.TODO(),
 		*e.ResourceGroup.Name,

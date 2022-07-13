@@ -37,10 +37,10 @@ type RecordSet struct {
 	ResourceGroup *ResourceGroup
 	Fqdn          *string
 
-	VirtualNetworkName *string
-	DNSZone            *string
+	VirtualNetworkName    *string
+	DNSZone               *string
 	RelativeRecordSetName *string
-	LoadBalancerName *string
+	LoadBalancerName      *string
 
 	// Shared is set if this is a shared security group (one we don't create or own)
 	Shared *bool
@@ -78,7 +78,6 @@ func (rs *RecordSet) Find(c *fi.Context) (*RecordSet, error) {
 		ResourceGroup: &ResourceGroup{
 			Name: rs.ResourceGroup.Name,
 		},
-		
 	}, nil
 }
 
@@ -106,9 +105,9 @@ func (*RecordSet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *RecordSet)
 	}
 
 	var lbID = &loadBalancerID{
-		SubscriptionID: t.Cloud.SubscriptionID(),
+		SubscriptionID:    t.Cloud.SubscriptionID(),
 		ResourceGroupName: *e.ResourceGroup.Name,
-		LoadBalancerName: *e.LoadBalancerName,
+		LoadBalancerName:  *e.LoadBalancerName,
 	}
 
 	recordSetProperties := armdns.RecordSetProperties{
@@ -119,12 +118,12 @@ func (*RecordSet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *RecordSet)
 	}
 
 	recordSet := armdns.RecordSet{
-		Name: to.StringPtr(*e.Name),
-		Type: to.StringPtr(string(armdns.RecordTypeA)),
+		Name:       to.StringPtr(*e.Name),
+		Type:       to.StringPtr(string(armdns.RecordTypeA)),
 		Properties: &recordSetProperties,
 	}
 
-	relativeRecordSetName := strings.ReplaceAll(*e.Fqdn, fmt.Sprintf(".%s",*e.DNSZone), "")
+	relativeRecordSetName := strings.ReplaceAll(*e.Fqdn, fmt.Sprintf(".%s", *e.DNSZone), "")
 
 	return t.Cloud.RecordSet().CreateOrUpdate(
 		context.TODO(),

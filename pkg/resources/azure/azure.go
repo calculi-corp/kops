@@ -595,20 +595,20 @@ func (g *resourceGetter) listRecordSets(ctx context.Context) ([]*resources.Resou
 
 func (g *resourceGetter) toRecordSetResource(recordSet *armdns.RecordSet, zoneName string) *resources.Resource {
 	return &resources.Resource{
-		Obj:     recordSet,
-		Type:    typeRecordSet,
-		ID:      *recordSet.Name,
-		Name:    *recordSet.Name,
+		Obj:  recordSet,
+		Type: typeRecordSet,
+		ID:   *recordSet.Name,
+		Name: *recordSet.Name,
 		Deleter: func(_ fi.Cloud, r *resources.Resource) error {
 			return g.deleteRecordSet(r, zoneName)
 		},
-		Blocks:  []string{toKey(typeResourceGroup, g.resourceGroupName())},
+		Blocks: []string{toKey(typeResourceGroup, g.resourceGroupName())},
 	}
 }
 
 func (g *resourceGetter) deleteRecordSet(r *resources.Resource, zoneName string) error {
 	recordSet := r.Obj.(*armdns.RecordSet)
-	
+
 	var i interface{} = *recordSet.Type
 	return g.cloud.RecordSet().Delete(context.TODO(), g.resourceGroupName(), zoneName, r.Name, i.(armdns.RecordType))
 }

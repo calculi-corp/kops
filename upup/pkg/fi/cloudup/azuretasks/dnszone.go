@@ -35,9 +35,7 @@ type DNSZone struct {
 	Lifecycle     fi.Lifecycle
 	ResourceGroup *ResourceGroup
 
-	VirtualNetworkName string
-	DNSName            *string
-	ZoneID             *string
+	VirtualNetworkName *string
 
 	// Shared is set if this is a shared security group (one we don't create or own)
 	Shared *bool
@@ -46,7 +44,6 @@ type DNSZone struct {
 
 	Private *bool
 }
-
 type virtualNetworkID struct {
 	SubscriptionID     string
 	ResourceGroupName  string
@@ -138,7 +135,7 @@ func (*DNSZone) RenderAzure(t *azure.AzureAPITarget, a, e, changes *DNSZone) err
 		var virtualNetworkID = virtualNetworkID{
 			SubscriptionID:     t.Cloud.SubscriptionID(),
 			ResourceGroupName:  *e.ResourceGroup.Name,
-			VirtualNetworkName: *&e.VirtualNetworkName,
+			VirtualNetworkName: *e.VirtualNetworkName,
 		}
 		zone.Properties.RegistrationVirtualNetworks = []*armdns.SubResource{
 			{
@@ -148,7 +145,7 @@ func (*DNSZone) RenderAzure(t *azure.AzureAPITarget, a, e, changes *DNSZone) err
 	} else {
 		*zone.Properties.ZoneType = armdns.ZoneTypePublic
 	}
-
+	
 	return t.Cloud.DNSZone().CreateOrUpdate(
 		context.TODO(),
 		*e.ResourceGroup.Name,

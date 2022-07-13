@@ -65,7 +65,7 @@ func (c *dnsZoneClientImpl) List(ctx context.Context, resourceGroupName string) 
 func (c *dnsZoneClientImpl) Delete(ctx context.Context, resourceGroupName, zoneName string) error {
 	poller, err := c.c.BeginDelete(ctx, resourceGroupName, zoneName, &armdns.ZonesClientBeginDeleteOptions{})
 	if err != nil {
-		return fmt.Errorf("error deleting dns zone: %s", err)
+		return fmt.Errorf("error deleting dns zone: %v", err)
 	}
 	_, err = poller.PollUntilDone(ctx, nil)
 	if err != nil {

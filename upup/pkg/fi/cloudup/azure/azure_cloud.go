@@ -59,6 +59,7 @@ type AzureCloud interface {
 	NetworkSecurityGroup() NetworkSecurityGroupClient
 	SecurityRules() SecurityRulesClient
 	DNSZone() DNSZoneClient
+	RecordSet() RecordSetClient
 }
 
 type azureCloudImplementation struct {
@@ -80,6 +81,7 @@ type azureCloudImplementation struct {
 	networkSecurityGroupClient     NetworkSecurityGroupClient
 	securityRulesClient            SecurityRulesClient
 	dnsZoneClient                  DNSZoneClient
+	recordSetClient                RecordSetClient
 }
 
 var _ fi.Cloud = &azureCloudImplementation{}
@@ -330,3 +332,8 @@ func (c *azureCloudImplementation) SecurityRules() SecurityRulesClient {
 func (c *azureCloudImplementation) DNSZone() DNSZoneClient {
 	return c.dnsZoneClient
 }
+
+func (c *azureCloudImplementation) RecordSet() RecordSetClient {
+	return c.recordSetClient
+}
+

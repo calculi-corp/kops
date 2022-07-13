@@ -64,6 +64,7 @@ type MockAzureCloud struct {
 	NetworkSecurityGroupClient     *MockNetworkSecurityGroupClient
 	SecurityRulesClient            *MockSecurityRulesClient
 	DNSZoneClient                  *MockDNSZoneClient
+	RecordSetClient                *MockRecordSetClient
 }
 
 var _ azure.AzureCloud = &MockAzureCloud{}
@@ -263,9 +264,14 @@ func (c *MockAzureCloud) SecurityRules() azure.SecurityRulesClient {
 	return c.SecurityRulesClient
 }
 
-// SecurityRulereturns the network security rules client.
+// DNSZone returns the dns zones client.
 func (c *MockAzureCloud) DNSZone() azure.DNSZoneClient {
 	return c.DNSZoneClient
+}
+
+// DNSZone returns the dns zones client.
+func (c *MockAzureCloud) RecordSet() azure.RecordSetClient {
+	return c.RecordSetClient
 }
 
 // MockResourceGroupsClient is a mock implementation of resource group client.
@@ -781,11 +787,51 @@ func (c *MockDNSZoneClient) List(ctx context.Context, resourceGroupName string) 
 	return l, nil
 }
 
-// Delete deletes a specified network security rule.
+// Delete deletes a specified DNS zone.
 func (c *MockDNSZoneClient) Delete(ctx context.Context, resourceGroupName, zoneName string) error {
 	if _, ok := c.DNSZones[zoneName]; !ok {
 		return fmt.Errorf("%s does not exist", zoneName)
 	}
 	delete(c.DNSZones, zoneName)
+	return nil
+}
+
+// MockDNSZoneClient is a mock implementation of DNS zone client
+type MockRecordSetClient struct {
+	RecordSets map[string]armdns.RecordSet
+}
+
+var _ azure.RecordSetClient = &MockRecordSetClient{}
+
+// CreateOrUpdate creates a new DNS zone.
+func (c *MockRecordSetClient) CreateOrUpdate(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string,
+	recordType armdns.RecordType, parameters armdns.RecordSet, options *armdns.RecordSetsClientCreateOrUpdateOptions) error {
+	if _, ok := c.RecordSets[relativeRecordSetName]; ok {
+		return nil
+	}
+	parameters.Name = &relativeRecordSetName
+	c.RecordSets[relativeRecordSetName] = parameters
+	return nil
+}
+
+// List returns a slice of record sets.
+func (c *MockRecordSetClient) List(ctx context.Context, resourceGroupName, zoneName string) (armdns.RecordSetListResult, error) {
+	var l armdns.RecordSetListResult
+
+	var records = []*armdns.RecordSet{}
+	for _, recordSet := range c.RecordSets {
+		records = append(records, &recordSet)
+	}
+
+	l.Value = records
+	return l, nil
+}
+
+// Delete deletes a specified record set.
+func (c *MockRecordSetClient) Delete(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType) error {
+	if _, ok := c.RecordSets[relativeRecordSetName]; !ok {
+		return fmt.Errorf("%s does not exist", relativeRecordSetName)
+	}
+	delete(c.RecordSets, relativeRecordSetName)
 	return nil
 }

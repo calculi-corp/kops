@@ -46,6 +46,7 @@ const (
 	typeApplicationSecurityGroup = "ApplicationSecurityGroup"
 	typeNetworkSecurityGroup     = "SecurityGroup"
 	typeDNSZone                  = "DNSZone"
+	typeRecordSet                = "RecordSet"
 )
 
 // ListResourcesAzure lists all resources for the cluster by quering Azure.
@@ -98,6 +99,7 @@ func (g *resourceGetter) listAll() ([]*resources.Resource, error) {
 		g.listPublicIPAddresses,
 		g.listApplicationSecurityGroups,
 		g.listNetworkSecurityGroups,
+		g.listRecordSets,
 		g.listDNSZones,
 	}
 
@@ -567,6 +569,47 @@ func (g *resourceGetter) toDNSZoneResource(dnsZone *armdns.Zone) *resources.Reso
 
 func (g *resourceGetter) deleteDNSZone(_ fi.Cloud, r *resources.Resource) error {
 	return g.cloud.DNSZone().Delete(context.TODO(), g.resourceGroupName(), r.Name)
+}
+
+func (g *resourceGetter) listRecordSets(ctx context.Context) ([]*resources.Resource, error) {
+	var rs []*resources.Resource
+
+	zoneResources, err := g.listDNSZones(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, z := range zoneResources {
+		records, err := g.cloud.RecordSet().List(ctx, g.resourceGroupName(), z.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, p := range records.Value {
+			rs = append(rs, g.toRecordSetResource(p, z.Name))
+		}
+	}
+	return rs, nil
+}
+
+func (g *resourceGetter) toRecordSetResource(recordSet *armdns.RecordSet, zoneName string) *resources.Resource {
+	return &resources.Resource{
+		Obj:     recordSet,
+		Type:    typeRecordSet,
+		ID:      *recordSet.Name,
+		Name:    *recordSet.Name,
+		Deleter: func(_ fi.Cloud, r *resources.Resource) error {
+			return g.deleteRecordSet(r, zoneName)
+		},
+		Blocks:  []string{toKey(typeResourceGroup, g.resourceGroupName())},
+	}
+}
+
+func (g *resourceGetter) deleteRecordSet(r *resources.Resource, zoneName string) error {
+	recordSet := r.Obj.(*armdns.RecordSet)
+	
+	var i interface{} = *recordSet.Type
+	return g.cloud.RecordSet().Delete(context.TODO(), g.resourceGroupName(), zoneName, r.Name, i.(armdns.RecordType))
 }
 
 // isOwnedByCluster returns true if the resource is owned by the cluster.

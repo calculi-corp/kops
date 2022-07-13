@@ -354,31 +354,36 @@ var _ azure.SubnetsClient = &MockSubnetsClient{}
 
 // CreateOrUpdate creates or updates a subnet.
 func (c *MockSubnetsClient) CreateOrUpdate(ctx context.Context, resourceGroupName, virtualNetworkName, subnetName string, parameters network.Subnet) error {
-	// Ignore resourceGroupName and virtualNetworkName for simplicity.
-	if _, ok := c.Subnets[subnetName]; ok {
+	// Ignore resource group for simplicity
+	key := virtualNetworkName + "-" + subnetName
+	if _, ok := c.Subnets[key]; ok {
 		return fmt.Errorf("update not supported")
 	}
 	parameters.Name = &subnetName
-	c.Subnets[subnetName] = parameters
+	c.Subnets[key] = parameters
 	return nil
 }
 
 // List returns a slice of subnets.
 func (c *MockSubnetsClient) List(ctx context.Context, resourceGroupName, virtualNetworkName string) ([]network.Subnet, error) {
 	var l []network.Subnet
-	for _, subnet := range c.Subnets {
-		l = append(l, subnet)
+	for key, subnet := range c.Subnets {
+		if strings.HasPrefix(key, virtualNetworkName) {
+			l = append(l, subnet)
+		}
 	}
 	return l, nil
 }
 
 // Delete deletes a specified subnet.
 func (c *MockSubnetsClient) Delete(ctx context.Context, resourceGroupName, vnetName, subnetName string) error {
-	// Ignore resourceGroupName and virtualNetworkName for simplicity.
-	if _, ok := c.Subnets[subnetName]; !ok {
+	// Ignore resourceGroupName  for simplicity.
+	key := vnetName + "-" + subnetName
+
+	if _, ok := c.Subnets[key]; !ok {
 		return fmt.Errorf("%s does not exist", subnetName)
 	}
-	delete(c.Subnets, subnetName)
+	delete(c.Subnets, key)
 	return nil
 }
 

@@ -158,6 +158,7 @@ func (g *resourceGetter) listVirtualNetworksAndSubnets(ctx context.Context) ([]*
 		vnet := &vnets[i]
 		if g.isOwnedByCluster(vnet.Tags) {
 			rs = append(rs, g.toVirtualNetworkResource(vnet))
+			// we still have subnets deployed to existing vnet - so look at subnets separately
 		}
 		// Add all subnets belonging to the virtual network.
 		subnets, err := g.listSubnets(ctx, *vnet.Name)

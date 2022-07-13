@@ -112,7 +112,7 @@ func (*VirtualNetwork) CheckChanges(a, e, changes *VirtualNetwork) error {
 
 // RenderAzure creates or updates a Virtual Network.
 func (*VirtualNetwork) RenderAzure(t *azure.AzureAPITarget, a, e, changes *VirtualNetwork) error {
-	if *e.Shared {
+	if e.Shared != nil && *e.Shared {
 		klog.Infof("Shared Network: %s - skipping create or update", fi.StringValue(e.Name))
 		return nil
 	}

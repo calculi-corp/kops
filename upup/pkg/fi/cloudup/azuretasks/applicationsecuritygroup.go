@@ -106,7 +106,7 @@ func (*ApplicationSecurityGroup) RenderAzure(t *azure.AzureAPITarget, a, e, chan
 	}
 
 	asg := network.ApplicationSecurityGroup{
-		Name:     to.StringPtr(*e.Name),
+		Name:     e.Name,
 		Location: to.StringPtr(t.Cloud.Region()),
 		Tags:     e.Tags,
 	}

@@ -631,6 +631,7 @@ func (c *ApplyClusterCmd) Run(ctx context.Context) error {
 			}
 			l.Builders = append(l.Builders,
 				&azuremodel.APILoadBalancerModelBuilder{AzureModelContext: azureModelContext, Lifecycle: clusterLifecycle},
+				&azuremodel.DNSModelBuilder{AzureModelContext: azureModelContext, Lifecycle: clusterLifecycle},
 				&azuremodel.NetworkModelBuilder{AzureModelContext: azureModelContext, Lifecycle: clusterLifecycle},
 				&azuremodel.ResourceGroupModelBuilder{AzureModelContext: azureModelContext, Lifecycle: clusterLifecycle},
 

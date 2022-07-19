@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 
 	// Use 2018-01-01-preview API as we need the version to create
 	// a role assignment with Data Actions (https://github.com/Azure/azure-sdk-for-go/issues/1895).
@@ -64,7 +65,8 @@ type MockAzureCloud struct {
 	NetworkSecurityGroupClient     *MockNetworkSecurityGroupClient
 	SecurityRulesClient            *MockSecurityRulesClient
 	DNSZoneClient                  *MockDNSZoneClient
-	RecordSetClient                *MockRecordSetClient
+	PrivateRecordSetClient         *MockPrivateRecordSetClient
+	PublicRecordSetClient          *MockPublicRecordSetClient
 }
 
 var _ azure.AzureCloud = &MockAzureCloud{}
@@ -116,7 +118,13 @@ func NewMockAzureCloud(location string) *MockAzureCloud {
 			SecurityRules: map[string]network.SecurityRule{},
 		},
 		DNSZoneClient: &MockDNSZoneClient{
-			DNSZones: map[string]armdns.Zone{},
+			DNSZones: map[string]privatedns.PrivateZone{},
+		},
+		PrivateRecordSetClient: &MockPrivateRecordSetClient{
+			RecordSets: map[string]privatedns.RecordSet{},
+		},
+		PublicRecordSetClient: &MockPublicRecordSetClient{
+			RecordSets: map[string]armdns.RecordSet{},
 		},
 	}
 }
@@ -269,9 +277,14 @@ func (c *MockAzureCloud) DNSZone() azure.DNSZoneClient {
 	return c.DNSZoneClient
 }
 
-// DNSZone returns the dns zones client.
-func (c *MockAzureCloud) RecordSet() azure.RecordSetClient {
-	return c.RecordSetClient
+// PrivateRecordSet returns private record set client.
+func (c *MockAzureCloud) PrivateRecordSet() azure.PrivateRecordSetClient {
+	return c.PrivateRecordSetClient
+}
+
+// PublicRecordSet returns private record set client.
+func (c *MockAzureCloud) PublicRecordSet() azure.PublicRecordSetClient {
+	return c.PublicRecordSetClient
 }
 
 // MockResourceGroupsClient is a mock implementation of resource group client.
@@ -768,13 +781,13 @@ func (c *MockSecurityRulesClient) Delete(ctx context.Context, resourceGroupName,
 
 // MockDNSZoneClient is a mock implementation of DNS zone client
 type MockDNSZoneClient struct {
-	DNSZones map[string]armdns.Zone
+	DNSZones map[string]privatedns.PrivateZone
 }
 
 var _ azure.DNSZoneClient = &MockDNSZoneClient{}
 
 // CreateOrUpdate creates a new DNS zone.
-func (c *MockDNSZoneClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, zoneName string, parameters armdns.Zone, options *armdns.ZonesClientCreateOrUpdateOptions) error {
+func (c *MockDNSZoneClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, zoneName string, parameters privatedns.PrivateZone) error {
 	if _, ok := c.DNSZones[zoneName]; ok {
 		return nil
 	}
@@ -784,8 +797,8 @@ func (c *MockDNSZoneClient) CreateOrUpdate(ctx context.Context, resourceGroupNam
 }
 
 // List returns a slice of dns zones.
-func (c *MockDNSZoneClient) List(ctx context.Context, resourceGroupName string) ([]armdns.Zone, error) {
-	var l []armdns.Zone
+func (c *MockDNSZoneClient) List(ctx context.Context, resourceGroupName string) ([]privatedns.PrivateZone, error) {
+	var l []privatedns.PrivateZone
 	for _, zone := range c.DNSZones {
 		l = append(l, zone)
 	}
@@ -801,15 +814,55 @@ func (c *MockDNSZoneClient) Delete(ctx context.Context, resourceGroupName, zoneN
 	return nil
 }
 
-// MockDNSZoneClient is a mock implementation of DNS zone client
-type MockRecordSetClient struct {
+// MockPrivateRecordSetClient is a mock implementation of Private record ser client
+type MockPrivateRecordSetClient struct {
+	RecordSets map[string]privatedns.RecordSet
+}
+
+var _ azure.PrivateRecordSetClient = &MockPrivateRecordSetClient{}
+
+// CreateOrUpdate creates a new DNS zone.
+func (c *MockPrivateRecordSetClient) CreateOrUpdate(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string,
+	recordType privatedns.RecordType, parameters privatedns.RecordSet) error {
+	if _, ok := c.RecordSets[relativeRecordSetName]; ok {
+		return nil
+	}
+	parameters.Name = &relativeRecordSetName
+	c.RecordSets[relativeRecordSetName] = parameters
+	return nil
+}
+
+// List returns a slice of record sets.
+func (c *MockPrivateRecordSetClient) List(ctx context.Context, resourceGroupName, zoneName string) (privatedns.RecordSetListResult, error) {
+	var l privatedns.RecordSetListResult
+
+	var records = []privatedns.RecordSet{}
+	for _, recordSet := range c.RecordSets {
+		records = append(records, recordSet)
+	}
+
+	l.Value = &records
+	return l, nil
+}
+
+// Delete deletes a specified record set.
+func (c *MockPrivateRecordSetClient) Delete(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType privatedns.RecordType) error {
+	if _, ok := c.RecordSets[relativeRecordSetName]; !ok {
+		return fmt.Errorf("%s does not exist", relativeRecordSetName)
+	}
+	delete(c.RecordSets, relativeRecordSetName)
+	return nil
+}
+
+// MockPublicRecordSetClient is a mock implementation of Private record ser client
+type MockPublicRecordSetClient struct {
 	RecordSets map[string]armdns.RecordSet
 }
 
-var _ azure.RecordSetClient = &MockRecordSetClient{}
+var _ azure.PublicRecordSetClient = &MockPublicRecordSetClient{}
 
 // CreateOrUpdate creates a new DNS zone.
-func (c *MockRecordSetClient) CreateOrUpdate(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string,
+func (c *MockPublicRecordSetClient) CreateOrUpdate(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string,
 	recordType armdns.RecordType, parameters armdns.RecordSet, options *armdns.RecordSetsClientCreateOrUpdateOptions) error {
 	if _, ok := c.RecordSets[relativeRecordSetName]; ok {
 		return nil
@@ -820,7 +873,7 @@ func (c *MockRecordSetClient) CreateOrUpdate(ctx context.Context, resourceGroupN
 }
 
 // List returns a slice of record sets.
-func (c *MockRecordSetClient) List(ctx context.Context, resourceGroupName, zoneName string) (armdns.RecordSetListResult, error) {
+func (c *MockPublicRecordSetClient) List(ctx context.Context, resourceGroupName, zoneName string) (armdns.RecordSetListResult, error) {
 	var l armdns.RecordSetListResult
 
 	var records = []*armdns.RecordSet{}
@@ -833,7 +886,7 @@ func (c *MockRecordSetClient) List(ctx context.Context, resourceGroupName, zoneN
 }
 
 // Delete deletes a specified record set.
-func (c *MockRecordSetClient) Delete(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType) error {
+func (c *MockPublicRecordSetClient) Delete(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType) error {
 	if _, ok := c.RecordSets[relativeRecordSetName]; !ok {
 		return fmt.Errorf("%s does not exist", relativeRecordSetName)
 	}

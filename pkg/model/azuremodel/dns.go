@@ -46,7 +46,7 @@ func (b *DNSModelBuilder) Build(c *fi.ModelBuilderContext) error {
 
 	// Create DNS Zone
 	dz := &azuretasks.DNSZone{
-		Name:          fi.String(b.NameForLoadBalancer()),
+		Name:          fi.String(b.NameForDNSZone()),
 		Lifecycle:     b.Lifecycle,
 		ResourceGroup: b.LinkToResourceGroup(),
 
@@ -57,5 +57,22 @@ func (b *DNSModelBuilder) Build(c *fi.ModelBuilderContext) error {
 	}
 
 	c.AddTask(dz)
+
+	// Create record sets
+	rs := &azuretasks.RecordSet{
+		Name:          fi.String(b.NameForRecordSet()),
+		Lifecycle:     b.Lifecycle,
+		ResourceGroup: b.LinkToResourceGroup(),
+		Fqdn:          fi.String(b.ClusterName()),
+
+		VirtualNetworkName:    fi.String(b.NameForVirtualNetwork()),
+		DNSZone:               fi.String(b.NameForDNSZone()),
+		LoadBalancerName:      fi.String(b.NameForLoadBalancer()),
+		RelativeRecordSetName: fi.String(b.NameForRecordSet()),
+		Private:               to.BoolPtr(private),
+		TTL:                   to.Int64Ptr(3600),
+	}
+	c.AddTask(rs)
+
 	return nil
 }

@@ -20,31 +20,35 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
+	"github.com/Azure/go-autorest/autorest"
+	"k8s.io/klog/v2"
 )
 
 // RecordSetClient is a client for managing DNS entries
-type RecordSetClient interface {
+type PublicRecordSetClient interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string,
 		recordType armdns.RecordType, parameters armdns.RecordSet, options *armdns.RecordSetsClientCreateOrUpdateOptions) error
 	List(ctx context.Context, resourceGroupName, zoneName string) (armdns.RecordSetListResult, error)
 	Delete(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType) error
 }
 
-type recordSetsClientImpl struct {
+type publicRecordSetClient struct {
 	c *armdns.RecordSetsClient
 }
 
-var _ RecordSetClient = &recordSetsClientImpl{}
+var _ PublicRecordSetClient = &publicRecordSetClient{}
 
-func (c *recordSetsClientImpl) CreateOrUpdate(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string,
+func (c *publicRecordSetClient) CreateOrUpdate(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string,
 	recordType armdns.RecordType, parameters armdns.RecordSet, options *armdns.RecordSetsClientCreateOrUpdateOptions) error {
 	_, err := c.c.CreateOrUpdate(ctx, resourceGroupName, zoneName, relativeRecordSetName,
 		recordType, parameters, options)
 	return err
 }
 
-func (c *recordSetsClientImpl) List(ctx context.Context, resourceGroupName, zoneName string) (armdns.RecordSetListResult, error) {
+func (c *publicRecordSetClient) List(ctx context.Context, resourceGroupName, zoneName string) (armdns.RecordSetListResult, error) {
 	var l armdns.RecordSetListResult
 
 	var records = []*armdns.RecordSet{}
@@ -64,11 +68,25 @@ func (c *recordSetsClientImpl) List(ctx context.Context, resourceGroupName, zone
 	return l, nil
 }
 
-func (c *recordSetsClientImpl) Delete(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType) error {
+func (c *publicRecordSetClient) Delete(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType) error {
 	_, err := c.c.Delete(ctx, resourceGroupName, zoneName, relativeRecordSetName,
 		recordType, &armdns.RecordSetsClientDeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("error deleting dns record set: %v", err)
 	}
 	return nil
+}
+
+func newPublicRecordSetsClient(subscriptionID string, authorizer autorest.Authorizer) *publicRecordSetClient {
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		klog.Fatalf("Could not get default Azure credentials - %v", err)
+	}
+	c, err := armdns.NewRecordSetsClient(subscriptionID, cred, &arm.ClientOptions{})
+	if err != nil {
+		klog.Fatalf("Could not initialize Azure record sets client - %v", err)
+	}
+	return &publicRecordSetClient{
+		c: c,
+	}
 }

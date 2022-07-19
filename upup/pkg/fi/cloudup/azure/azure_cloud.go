@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"k8s.io/klog/v2"
 	"k8s.io/kops/dnsprovider/pkg/dnsprovider"
+	azuredns "k8s.io/kops/dnsprovider/pkg/dnsprovider/providers/azure/armdns"
 	"k8s.io/kops/pkg/apis/kops"
 	"k8s.io/kops/pkg/cloudinstances"
 	"k8s.io/kops/upup/pkg/fi"
@@ -59,7 +60,8 @@ type AzureCloud interface {
 	NetworkSecurityGroup() NetworkSecurityGroupClient
 	SecurityRules() SecurityRulesClient
 	DNSZone() DNSZoneClient
-	RecordSet() RecordSetClient
+	PublicRecordSet() PublicRecordSetClient
+	PrivateRecordSet() PrivateRecordSetClient
 }
 
 type azureCloudImplementation struct {
@@ -81,7 +83,8 @@ type azureCloudImplementation struct {
 	networkSecurityGroupClient     NetworkSecurityGroupClient
 	securityRulesClient            SecurityRulesClient
 	dnsZoneClient                  DNSZoneClient
-	recordSetClient                RecordSetClient
+	privateRecordSetClient         PrivateRecordSetClient
+	publicRecordSetClient          PublicRecordSetClient
 }
 
 var _ fi.Cloud = &azureCloudImplementation{}
@@ -112,6 +115,8 @@ func NewAzureCloud(subscriptionID, location string, tags map[string]string) (Azu
 		networkSecurityGroupClient:     newNetworkSecurityGroupClientImpl(subscriptionID, authorizer),
 		securityRulesClient:            newSecurityRulesClientImpl(subscriptionID, authorizer),
 		dnsZoneClient:                  newDNSZoneClientImpl(subscriptionID, authorizer),
+		privateRecordSetClient:         newPrivateRecordSetsClient(subscriptionID, authorizer),
+		publicRecordSetClient:          newPublicRecordSetsClient(subscriptionID, authorizer),
 	}, nil
 }
 
@@ -124,7 +129,11 @@ func (c *azureCloudImplementation) ProviderID() kops.CloudProviderID {
 }
 
 func (c *azureCloudImplementation) DNS() (dnsprovider.Interface, error) {
-	return nil, errors.New("DNS not implemented on azureCloud")
+	provider, err := dnsprovider.GetDnsProvider(azuredns.ProviderName, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error building (k8s) DNS provider: %v", err)
+	}
+	return provider, nil
 }
 
 func (c *azureCloudImplementation) FindVPCInfo(id string) (*fi.VPCInfo, error) {
@@ -333,6 +342,10 @@ func (c *azureCloudImplementation) DNSZone() DNSZoneClient {
 	return c.dnsZoneClient
 }
 
-func (c *azureCloudImplementation) RecordSet() RecordSetClient {
-	return c.recordSetClient
+func (c *azureCloudImplementation) PrivateRecordSet() PrivateRecordSetClient {
+	return c.privateRecordSetClient
+}
+
+func (c *azureCloudImplementation) PublicRecordSet() PublicRecordSetClient {
+	return c.publicRecordSetClient
 }

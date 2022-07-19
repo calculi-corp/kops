@@ -18,6 +18,7 @@ package cloudup
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -271,6 +272,8 @@ func NewCluster(opt *NewClusterOptions, clientset simple.Clientset) (*NewCluster
 			RouteTableName:    opt.AzureRouteTableName,
 			AdminUser:         opt.AzureAdminUser,
 		}
+		klog.Info("Setting the resource group name in the environment as AZURE_RESOURCEGROUP_NAME")
+		os.Setenv("AZURE_RESOURCEGROUP_NAME", opt.AzureResourceGroupName)
 	case api.CloudProviderDO:
 		cluster.Spec.CloudProvider.DO = &api.DOSpec{}
 	case api.CloudProviderGCE:

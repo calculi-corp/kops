@@ -93,6 +93,10 @@ func (c *AzureModelContext) NameForLoadBalancer() string {
 	return "api-" + c.ClusterName()
 }
 
+func (c *AzureModelContext) NameForRecordSet() string {
+	return strings.Replace(c.ClusterName(), fmt.Sprintf(".%s", c.NameForDNSZone()), "", 1)
+}
+
 // CloudTagsForInstanceGroup computes the tags to apply to instances in the specified InstanceGroup
 // Mostly copied from pkg/model/context.go, but "/" in tag keys are replaced with "_" as Azure
 // doesn't allow "/" in tag keys.

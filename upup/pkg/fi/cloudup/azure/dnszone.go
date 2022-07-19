@@ -20,54 +20,47 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
+	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest"
-	"k8s.io/klog/v2"
 )
 
 // DNSZoneClient is a client for managing DNS zones
 type DNSZoneClient interface {
-	CreateOrUpdate(ctx context.Context, resourceGroupName string, zoneName string, parameters armdns.Zone, options *armdns.ZonesClientCreateOrUpdateOptions) error
-	List(ctx context.Context, resourceGroupName string) ([]armdns.Zone, error)
+	CreateOrUpdate(ctx context.Context, resourceGroupName string, zoneName string, parameters privatedns.PrivateZone) error
+	List(ctx context.Context, resourceGroupName string) ([]privatedns.PrivateZone, error)
 	Delete(ctx context.Context, resourceGroupName, zoneName string) error
 }
 
 type dnsZoneClientImpl struct {
-	c *armdns.ZonesClient
+	c *privatedns.PrivateZonesClient
 }
 
 var _ DNSZoneClient = &dnsZoneClientImpl{}
 
-func (c *dnsZoneClientImpl) CreateOrUpdate(ctx context.Context, resourceGroupName string, zoneName string, parameters armdns.Zone, options *armdns.ZonesClientCreateOrUpdateOptions) error {
-	_, err := c.c.CreateOrUpdate(ctx, resourceGroupName, zoneName, parameters, options)
+func (c *dnsZoneClientImpl) CreateOrUpdate(ctx context.Context, resourceGroupName string, zoneName string, parameters privatedns.PrivateZone) error {
+	_, err := c.c.CreateOrUpdate(ctx, resourceGroupName, zoneName, parameters, "", "*") // ifMatch set to "", ifNoneMatch set to "*" to prevent overwrite of a zone
 	return err
 }
 
-func (c *dnsZoneClientImpl) List(ctx context.Context, resourceGroupName string) ([]armdns.Zone, error) {
-	var l []armdns.Zone
+func (c *dnsZoneClientImpl) List(ctx context.Context, resourceGroupName string) ([]privatedns.PrivateZone, error) {
+	var l []privatedns.PrivateZone
 
-	pager := c.c.NewListByResourceGroupPager(resourceGroupName,
-		&armdns.ZonesClientListByResourceGroupOptions{Top: nil})
-	for pager.More() {
-		nextResult, err := pager.NextPage(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, v := range nextResult.Value {
-			l = append(l, *v)
-		}
+	pager, err := c.c.ListByResourceGroup(ctx, resourceGroupName, nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range pager.Values() {
+		l = append(l, v)
 	}
 	return l, nil
 }
 
 func (c *dnsZoneClientImpl) Delete(ctx context.Context, resourceGroupName, zoneName string) error {
-	poller, err := c.c.BeginDelete(ctx, resourceGroupName, zoneName, &armdns.ZonesClientBeginDeleteOptions{})
+	poller, err := c.c.Delete(ctx, resourceGroupName, zoneName, "")
 	if err != nil {
 		return fmt.Errorf("error deleting dns zone: %v", err)
 	}
-	_, err = poller.PollUntilDone(ctx, nil)
+	err = poller.WaitForCompletionRef(ctx, autorest.Client{PollingDuration: 0})
 	if err != nil {
 		return fmt.Errorf("error waiting for DNS zone deletion completion: %s", err)
 	}
@@ -75,12 +68,9 @@ func (c *dnsZoneClientImpl) Delete(ctx context.Context, resourceGroupName, zoneN
 }
 
 func newDNSZoneClientImpl(subscriptionID string, authorizer autorest.Authorizer) *dnsZoneClientImpl {
-	cred, err := azidentity.NewDefaultAzureCredential(nil)
-	if err != nil {
-		klog.Fatalf("Could not get default Azure credentials")
-	}
-	c, err := armdns.NewZonesClient(subscriptionID, cred, &arm.ClientOptions{})
+	c := privatedns.NewPrivateZonesClient(subscriptionID)
+	c.Authorizer = authorizer
 	return &dnsZoneClientImpl{
-		c: c,
+		c: &c,
 	}
 }

@@ -533,6 +533,8 @@ func (tf *TemplateFunctions) DNSControllerArgv() ([]string, error) {
 			argv = append(argv, "--dns=google-clouddns")
 		case kops.CloudProviderDO:
 			argv = append(argv, "--dns=digitalocean")
+		case kops.CloudProviderAzure:
+			argv = append(argv, "--dns=azure-dns")
 
 		default:
 			return nil, fmt.Errorf("unhandled cloudprovider %q", cluster.Spec.GetCloudProvider())

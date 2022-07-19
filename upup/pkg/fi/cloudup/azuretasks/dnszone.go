@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
+	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"k8s.io/klog/v2"
@@ -71,7 +71,7 @@ func (dz *DNSZone) Find(c *fi.Context) (*DNSZone, error) {
 	if err != nil {
 		return nil, err
 	}
-	var found *armdns.Zone
+	var found *privatedns.PrivateZone
 	for _, v := range l {
 		if *v.Name == *dz.Name {
 			found = &v
@@ -122,28 +122,11 @@ func (*DNSZone) RenderAzure(t *azure.AzureAPITarget, a, e, changes *DNSZone) err
 		klog.Infof("Updating a DNS zone with name: %s", fi.StringValue(e.Name))
 	}
 
-	zone := armdns.Zone{
-		Name:       to.StringPtr(*e.Name),
-		Location:   to.StringPtr(t.Cloud.Region()),
-		Tags:       e.Tags,
-		Properties: &armdns.ZoneProperties{},
-	}
-
-	if *e.Private {
-		*zone.Properties.ZoneType = armdns.ZoneTypePrivate
-
-		var virtualNetworkID = virtualNetworkID{
-			SubscriptionID:     t.Cloud.SubscriptionID(),
-			ResourceGroupName:  *e.ResourceGroup.Name,
-			VirtualNetworkName: *e.VirtualNetworkName,
-		}
-		zone.Properties.RegistrationVirtualNetworks = []*armdns.SubResource{
-			{
-				ID: to.StringPtr(virtualNetworkID.String()),
-			},
-		}
-	} else {
-		*zone.Properties.ZoneType = armdns.ZoneTypePublic
+	zone := privatedns.PrivateZone{
+		Name:                  e.Name,
+		Location:              to.StringPtr("Global"),
+		Tags:                  e.Tags,
+		PrivateZoneProperties: &privatedns.PrivateZoneProperties{},
 	}
 
 	return t.Cloud.DNSZone().CreateOrUpdate(
@@ -151,6 +134,5 @@ func (*DNSZone) RenderAzure(t *azure.AzureAPITarget, a, e, changes *DNSZone) err
 		*e.ResourceGroup.Name,
 		*e.Name,
 		zone,
-		nil,
 	)
 }

@@ -111,7 +111,7 @@ func (*PublicIPAddress) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Publ
 			Name: network.PublicIPAddressSkuNameStandard,
 		},
 		Location: to.StringPtr(t.Cloud.Region()),
-		Name:     to.StringPtr(*e.Name),
+		Name:     e.Name,
 		PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
 			PublicIPAddressVersion:   network.IPv4,
 			PublicIPAllocationMethod: network.Static,

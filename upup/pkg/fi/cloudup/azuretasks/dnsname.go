@@ -19,12 +19,13 @@ package azuretasks
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
+	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"k8s.io/klog/v2"
+	"k8s.io/kops/pkg/apis/kops"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/azure"
 )
@@ -40,12 +41,12 @@ type RecordSet struct {
 	VirtualNetworkName    *string
 	DNSZone               *string
 	RelativeRecordSetName *string
-	LoadBalancerName      *string
+	LoadBalancerName      *string // Used as SubResource when provisioning Public record set and used to fetch the ARecords to map to a Private record set
+	// Azure private record sets do not have a SubResource field to map to.
 
-	// Shared is set if this is a shared security group (one we don't create or own)
-	Shared *bool
-
+	TTL     *int64
 	Private *bool
+	Shared  *bool
 }
 
 var _ fi.CompareWithID = &RecordSet{}
@@ -56,20 +57,40 @@ func (rs *RecordSet) CompareWithID() *string {
 
 func (rs *RecordSet) Find(c *fi.Context) (*RecordSet, error) {
 	cloud := c.Cloud.(azure.AzureCloud)
-	l, err := cloud.RecordSet().List(context.TODO(), *rs.ResourceGroup.Name, *rs.DNSZone)
-	if err != nil {
-		return nil, err
-	}
-	var found *armdns.RecordSet
-	for _, v := range l.Value {
-		if *v.Name == *rs.Name {
-			found = v
-			klog.V(2).Infof("found matching record set %q", *found.ID)
-			break
+	if !isPrivateDNS(c) { // public
+		l, err := cloud.PublicRecordSet().List(context.TODO(), *rs.ResourceGroup.Name, *rs.DNSZone)
+		if err != nil {
+			return nil, err
 		}
-	}
-	if found == nil {
-		return nil, nil
+
+		var found *armdns.RecordSet
+		for _, v := range l.Value {
+			if *v.Name == *rs.Name {
+				found = v
+				klog.V(2).Infof("found matching public record set %q", *found.ID)
+				break
+			}
+		}
+		if found == nil {
+			return nil, nil
+		}
+	} else { // private
+		l, err := cloud.PrivateRecordSet().List(context.TODO(), *rs.ResourceGroup.Name, *rs.DNSZone)
+		if err != nil {
+			return nil, err
+		}
+
+		var found *privatedns.RecordSet
+		for _, v := range *l.Value {
+			if *v.Name == *rs.Name {
+				found = &v
+				klog.V(2).Infof("found matching private record set %q", *found.ID)
+				break
+			}
+		}
+		if found == nil {
+			return nil, nil
+		}
 	}
 
 	return &RecordSet{
@@ -110,28 +131,115 @@ func (*RecordSet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *RecordSet)
 		LoadBalancerName:  *e.LoadBalancerName,
 	}
 
-	recordSetProperties := armdns.RecordSetProperties{
-		Fqdn: e.Fqdn,
-		TargetResource: &armdns.SubResource{
-			ID: &lbID.LoadBalancerName,
+	if !*e.Private { // Public record set
+		recordSetProperties := armdns.RecordSetProperties{
+			Fqdn: e.Fqdn,
+			TargetResource: &armdns.SubResource{
+				ID: to.StringPtr(lbID.String()),
+			},
+		}
+
+		recordSet := armdns.RecordSet{
+			Name:       e.Name,
+			Type:       to.StringPtr(string(armdns.RecordTypeA)),
+			Properties: &recordSetProperties,
+		}
+
+		return t.Cloud.PublicRecordSet().CreateOrUpdate(
+			context.TODO(),
+			*e.ResourceGroup.Name,
+			*e.DNSZone,
+			*e.RelativeRecordSetName,
+			armdns.RecordTypeA,
+			recordSet,
+			nil,
+		)
+	}
+
+	// Private record set
+	var aRecord = &privatedns.ARecord{}
+	lbAddress, err := getLoadBalancerFrontEndAddress(t, *e.ResourceGroup.Name, *e.LoadBalancerName)
+	if err != nil {
+		return fmt.Errorf("unable to find load balancer front end address configuration - %v", err)
+	}
+
+	aRecord.Ipv4Address = lbAddress
+
+	recordSet := privatedns.RecordSet{
+		Name: e.Name,
+		Type: to.StringPtr(string(privatedns.A)),
+		RecordSetProperties: &privatedns.RecordSetProperties{
+			ARecords: &[]privatedns.ARecord{
+				*aRecord,
+			},
+			TTL:              e.TTL,
+			IsAutoRegistered: to.BoolPtr(true),
+			Fqdn:             e.Fqdn,
 		},
 	}
-
-	recordSet := armdns.RecordSet{
-		Name:       to.StringPtr(*e.Name),
-		Type:       to.StringPtr(string(armdns.RecordTypeA)),
-		Properties: &recordSetProperties,
-	}
-
-	relativeRecordSetName := strings.ReplaceAll(*e.Fqdn, fmt.Sprintf(".%s", *e.DNSZone), "")
-
-	return t.Cloud.RecordSet().CreateOrUpdate(
+	// Private record set
+	return t.Cloud.PrivateRecordSet().CreateOrUpdate(
 		context.TODO(),
 		*e.ResourceGroup.Name,
 		*e.DNSZone,
-		relativeRecordSetName,
-		armdns.RecordTypeA,
+		*e.RelativeRecordSetName,
+		privatedns.A,
 		recordSet,
-		nil,
 	)
+}
+
+func isPrivateDNS(c *fi.Context) bool {
+	var private bool
+
+	topology := c.Cluster.Spec.Topology
+	if topology != nil && topology.DNS != nil {
+		if topology.DNS.Type == kops.DNSTypePrivate {
+			private = true
+		}
+	}
+	return private
+}
+
+func getLoadBalancerFrontEndAddress(t *azure.AzureAPITarget, resourceGroup, loadBalancerName string) (*string, error) {
+	loadBalancers, err := t.Cloud.LoadBalancer().List(context.TODO(), resourceGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, lb := range loadBalancers {
+		if *lb.Name == loadBalancerName {
+			for _, feIPConfig := range *lb.FrontendIPConfigurations {
+				if feIPConfig.PublicIPAddress != nil {
+					ipAddr, err := getPublicIPAddressFromName(t, resourceGroup, loadBalancerName)
+					if err != nil {
+						return nil, err
+					}
+					klog.Infof("Found load balancer public address: %v", *ipAddr)
+					return ipAddr, nil
+				}
+
+				if feIPConfig.PrivateIPAddress != nil {
+					klog.Infof("Found load balancer private address: %v", *feIPConfig.PrivateIPAddress)
+					return feIPConfig.PrivateIPAddress, nil
+				}
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+func getPublicIPAddressFromName(t *azure.AzureAPITarget, resourceGroup, publicIPAddressName string) (*string, error) {
+	publicIPAddresses, err := t.Cloud.PublicIPAddress().List(context.TODO(), resourceGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, addr := range publicIPAddresses {
+		if *addr.Name == publicIPAddressName {
+			return addr.IPAddress, nil
+		}
+	}
+
+	return nil, nil
 }

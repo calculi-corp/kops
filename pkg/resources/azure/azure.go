@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
 	authz "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization"
+	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	azureresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2020-06-01/resources"
 	kopsapi "k8s.io/kops/pkg/apis/kops"
 	"k8s.io/kops/pkg/resources"
@@ -99,7 +99,7 @@ func (g *resourceGetter) listAll() ([]*resources.Resource, error) {
 		g.listPublicIPAddresses,
 		g.listApplicationSecurityGroups,
 		g.listNetworkSecurityGroups,
-		g.listRecordSets,
+		//g.listPrivateRecordSets,
 		g.listDNSZones,
 	}
 
@@ -540,6 +540,7 @@ func (g *resourceGetter) deleteNetworkSecurityGroup(_ fi.Cloud, r *resources.Res
 	return g.cloud.NetworkSecurityGroup().Delete(context.TODO(), g.resourceGroupName(), r.Name)
 }
 
+// only lists private DNS zones in Azure, since we do not create public DNS zones in Azure.
 func (g *resourceGetter) listDNSZones(ctx context.Context) ([]*resources.Resource, error) {
 	zones, err := g.cloud.DNSZone().List(ctx, g.resourceGroupName())
 	if err != nil {
@@ -557,7 +558,7 @@ func (g *resourceGetter) listDNSZones(ctx context.Context) ([]*resources.Resourc
 	return rs, nil
 }
 
-func (g *resourceGetter) toDNSZoneResource(dnsZone *armdns.Zone) *resources.Resource {
+func (g *resourceGetter) toDNSZoneResource(dnsZone *privatedns.PrivateZone) *resources.Resource {
 	return &resources.Resource{
 		Obj:     dnsZone,
 		Type:    typeDNSZone,
@@ -572,45 +573,41 @@ func (g *resourceGetter) deleteDNSZone(_ fi.Cloud, r *resources.Resource) error 
 	return g.cloud.DNSZone().Delete(context.TODO(), g.resourceGroupName(), r.Name)
 }
 
-func (g *resourceGetter) listRecordSets(ctx context.Context) ([]*resources.Resource, error) {
+func (g *resourceGetter) listPrivateRecordSets(ctx context.Context) ([]*resources.Resource, error) {
 	var rs []*resources.Resource
-
 	zoneResources, err := g.listDNSZones(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, z := range zoneResources {
-		records, err := g.cloud.RecordSet().List(ctx, g.resourceGroupName(), z.Name)
+		records, err := g.cloud.PrivateRecordSet().List(ctx, g.resourceGroupName(), z.Name)
 		if err != nil {
 			return nil, err
 		}
-
-		for _, p := range records.Value {
-			rs = append(rs, g.toRecordSetResource(p, z.Name))
+		for _, p := range *records.Value {
+			rs = append(rs, g.toPrivateRecordSetResource(&p, z.Name))
 		}
 	}
 	return rs, nil
 }
 
-func (g *resourceGetter) toRecordSetResource(recordSet *armdns.RecordSet, zoneName string) *resources.Resource {
+func (g *resourceGetter) toPrivateRecordSetResource(recordSet *privatedns.RecordSet, zoneName string) *resources.Resource {
 	return &resources.Resource{
 		Obj:  recordSet,
 		Type: typeRecordSet,
 		ID:   *recordSet.Name,
 		Name: *recordSet.Name,
 		Deleter: func(_ fi.Cloud, r *resources.Resource) error {
-			return g.deleteRecordSet(r, zoneName)
+			return g.deletePrivateRecordSet(r, zoneName)
 		},
 		Blocks: []string{toKey(typeResourceGroup, g.resourceGroupName())},
 	}
 }
 
-func (g *resourceGetter) deleteRecordSet(r *resources.Resource, zoneName string) error {
-	recordSet := r.Obj.(*armdns.RecordSet)
-
-	var i interface{} = *recordSet.Type
-	return g.cloud.RecordSet().Delete(context.TODO(), g.resourceGroupName(), zoneName, r.Name, i.(armdns.RecordType))
+func (g *resourceGetter) deletePrivateRecordSet(r *resources.Resource, zoneName string) error {
+	recordSet := r.Obj.(*privatedns.RecordSet)
+	return g.cloud.PrivateRecordSet().Delete(context.TODO(), g.resourceGroupName(), zoneName, r.Name, privatedns.RecordType(*recordSet.Type))
 }
 
 // isOwnedByCluster returns true if the resource is owned by the cluster.

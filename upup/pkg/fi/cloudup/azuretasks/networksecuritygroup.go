@@ -151,7 +151,7 @@ func (*NetworkSecurityGroup) RenderAzure(t *azure.AzureAPITarget, a, e, changes 
 	}
 
 	nsg := network.SecurityGroup{
-		Name:                          to.StringPtr(*e.Name),
+		Name:                          e.Name,
 		Location:                      to.StringPtr(t.Cloud.Region()),
 		Tags:                          e.Tags,
 		SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{},

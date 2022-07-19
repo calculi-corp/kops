@@ -116,7 +116,7 @@ func (c *ResourceRecordChangeset) createOrUpdateAzureRecordSet(recordSetInput dn
 		recordSetProperties := armdns.RecordSetProperties{
 			Fqdn:     to.StringPtr(recordSetInput.Name()),
 			ARecords: arecords,
-			TTL: to.Int64Ptr(recordSetInput.Ttl()),
+			TTL:      to.Int64Ptr(recordSetInput.Ttl()),
 		}
 
 		recordSet := armdns.RecordSet{
@@ -144,7 +144,7 @@ func (c *ResourceRecordChangeset) createOrUpdateAzureRecordSet(recordSetInput dn
 	recordSetProperties := privatedns.RecordSetProperties{
 		Fqdn:     to.StringPtr(recordSetInput.Name()),
 		ARecords: &arecords,
-		TTL: to.Int64Ptr(recordSetInput.Ttl()),
+		TTL:      to.Int64Ptr(recordSetInput.Ttl()),
 	}
 
 	recordSet := privatedns.RecordSet{

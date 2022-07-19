@@ -137,6 +137,7 @@ func (*RecordSet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *RecordSet)
 			TargetResource: &armdns.SubResource{
 				ID: to.StringPtr(lbID.String()),
 			},
+			TTL: e.TTL,
 		}
 
 		recordSet := armdns.RecordSet{

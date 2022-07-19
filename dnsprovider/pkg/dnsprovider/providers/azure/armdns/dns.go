@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	"regexp"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -66,5 +66,7 @@ func newZonesClient(_ io.Reader) (*Interface, error) {
 }
 
 func AzureRelativeRecordSetName(fqdn, zoneName string) string {
-	return strings.Replace(fqdn, fmt.Sprintf(".%s", zoneName), "", 1)
+	replacer := fmt.Sprintf(".%s.*", zoneName)
+	re := regexp.MustCompile(replacer)
+	return re.ReplaceAllString(fqdn, "")
 }

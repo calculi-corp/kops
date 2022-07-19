@@ -105,7 +105,6 @@ func (c *ResourceRecordChangeset) ResourceRecordSets() dnsprovider.ResourceRecor
 
 func (c *ResourceRecordChangeset) createOrUpdateAzureRecordSet(recordSetInput dnsprovider.ResourceRecordSet) error {
 	relativeRecordSetName := AzureRelativeRecordSetName(recordSetInput.Name(), c.zone.Name())
-
 	if c.zone.zoneType == PublicZoneType { // public record set
 		var arecords = []*armdns.ARecord{}
 		for _, rrdata := range recordSetInput.Rrdatas() {
@@ -117,6 +116,7 @@ func (c *ResourceRecordChangeset) createOrUpdateAzureRecordSet(recordSetInput dn
 		recordSetProperties := armdns.RecordSetProperties{
 			Fqdn:     to.StringPtr(recordSetInput.Name()),
 			ARecords: arecords,
+			TTL: to.Int64Ptr(recordSetInput.Ttl()),
 		}
 
 		recordSet := armdns.RecordSet{
@@ -144,6 +144,7 @@ func (c *ResourceRecordChangeset) createOrUpdateAzureRecordSet(recordSetInput dn
 	recordSetProperties := privatedns.RecordSetProperties{
 		Fqdn:     to.StringPtr(recordSetInput.Name()),
 		ARecords: &arecords,
+		TTL: to.Int64Ptr(recordSetInput.Ttl()),
 	}
 
 	recordSet := privatedns.RecordSet{

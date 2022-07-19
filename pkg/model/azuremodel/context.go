@@ -18,6 +18,7 @@ package azuremodel
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"k8s.io/kops/pkg/apis/kops"
@@ -94,7 +95,9 @@ func (c *AzureModelContext) NameForLoadBalancer() string {
 }
 
 func (c *AzureModelContext) NameForRecordSet() string {
-	return strings.Replace(c.ClusterName(), fmt.Sprintf(".%s", c.NameForDNSZone()), "", 1)
+	replacer := fmt.Sprintf(".%s.*", c.NameForDNSZone())
+	re := regexp.MustCompile(replacer)
+	return re.ReplaceAllString(c.ClusterName(), "")
 }
 
 // CloudTagsForInstanceGroup computes the tags to apply to instances in the specified InstanceGroup

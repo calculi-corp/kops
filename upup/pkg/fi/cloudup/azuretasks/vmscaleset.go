@@ -67,7 +67,7 @@ type loadBalancerID struct {
 	LoadBalancerName  string
 }
 
-// String returns the loadbalancer ID in the path format.
+// String returns the loadbalancer backend ID in the path format.
 func (lb *loadBalancerID) String() string {
 	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/loadbalancers/%s/backendAddressPools/LoadBalancerBackEnd",
 		lb.SubscriptionID,

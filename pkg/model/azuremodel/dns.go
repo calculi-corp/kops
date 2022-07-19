@@ -44,19 +44,21 @@ func (b *DNSModelBuilder) Build(c *fi.ModelBuilderContext) error {
 		private = true
 	}
 
-	// Create DNS Zone
-	dz := &azuretasks.DNSZone{
-		Name:          fi.String(b.NameForDNSZone()),
-		Lifecycle:     b.Lifecycle,
-		ResourceGroup: b.LinkToResourceGroup(),
+	if private { // only create private DNS zones
+		// Create DNS Zone
+		dz := &azuretasks.DNSZone{
+			Name:          fi.String(b.NameForDNSZone()),
+			Lifecycle:     b.Lifecycle,
+			ResourceGroup: b.LinkToResourceGroup(),
 
-		VirtualNetworkName: fi.String(b.NameForVirtualNetwork()),
-		Shared:             fi.Bool(len(b.Cluster.Spec.DNSZone) > 0),
-		Tags:               map[string]*string{},
-		Private:            to.BoolPtr(private),
+			VirtualNetworkName: fi.String(b.NameForVirtualNetwork()),
+			Shared:             fi.Bool(len(b.Cluster.Spec.DNSZone) > 0),
+			Tags:               map[string]*string{},
+			Private:            to.BoolPtr(private),
+		}
+
+		c.AddTask(dz)
 	}
-
-	c.AddTask(dz)
 
 	// Create record sets
 	rs := &azuretasks.RecordSet{

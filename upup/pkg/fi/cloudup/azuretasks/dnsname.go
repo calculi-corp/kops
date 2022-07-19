@@ -125,17 +125,19 @@ func (*RecordSet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *RecordSet)
 		klog.Infof("Updating a Record set with name: %s", fi.StringValue(e.Name))
 	}
 
-	var lbID = &loadBalancerID{
-		SubscriptionID:    t.Cloud.SubscriptionID(),
-		ResourceGroupName: *e.ResourceGroup.Name,
-		LoadBalancerName:  *e.LoadBalancerName,
-	}
-
 	if !*e.Private { // Public record set
+		// Private record set
+		var aRecord = &armdns.ARecord{}
+		lbAddress, _, err := getLoadBalancerFrontEndAddress(t, *e.ResourceGroup.Name, *e.LoadBalancerName)
+		if err != nil {
+			return fmt.Errorf("unable to find load balancer front end address configuration - %v", err)
+		}
+
+		aRecord.IPv4Address = lbAddress
 		recordSetProperties := armdns.RecordSetProperties{
 			Fqdn: e.Fqdn,
-			TargetResource: &armdns.SubResource{
-				ID: to.StringPtr(lbID.String()),
+			ARecords: []*armdns.ARecord{
+				aRecord,
 			},
 			TTL: e.TTL,
 		}
@@ -159,7 +161,7 @@ func (*RecordSet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *RecordSet)
 
 	// Private record set
 	var aRecord = &privatedns.ARecord{}
-	lbAddress, err := getLoadBalancerFrontEndAddress(t, *e.ResourceGroup.Name, *e.LoadBalancerName)
+	lbAddress, _, err := getLoadBalancerFrontEndAddress(t, *e.ResourceGroup.Name, *e.LoadBalancerName)
 	if err != nil {
 		return fmt.Errorf("unable to find load balancer front end address configuration - %v", err)
 	}
@@ -201,10 +203,11 @@ func isPrivateDNS(c *fi.Context) bool {
 	return private
 }
 
-func getLoadBalancerFrontEndAddress(t *azure.AzureAPITarget, resourceGroup, loadBalancerName string) (*string, error) {
+// returns the IP address, the IP address ID (only applicable for public IP address) and error
+func getLoadBalancerFrontEndAddress(t *azure.AzureAPITarget, resourceGroup, loadBalancerName string) (*string, *string, error) {
 	loadBalancers, err := t.Cloud.LoadBalancer().List(context.TODO(), resourceGroup)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for _, lb := range loadBalancers {
@@ -213,21 +216,21 @@ func getLoadBalancerFrontEndAddress(t *azure.AzureAPITarget, resourceGroup, load
 				if feIPConfig.PublicIPAddress != nil {
 					ipAddr, err := getPublicIPAddressFromName(t, resourceGroup, loadBalancerName)
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
 					klog.Infof("Found load balancer public address: %v", *ipAddr)
-					return ipAddr, nil
+					return ipAddr, feIPConfig.PublicIPAddress.ID, nil
 				}
 
 				if feIPConfig.PrivateIPAddress != nil {
 					klog.Infof("Found load balancer private address: %v", *feIPConfig.PrivateIPAddress)
-					return feIPConfig.PrivateIPAddress, nil
+					return feIPConfig.PrivateIPAddress, nil, nil
 				}
 			}
 		}
 	}
 
-	return nil, nil
+	return nil, nil, nil
 }
 
 func getPublicIPAddressFromName(t *azure.AzureAPITarget, resourceGroup, publicIPAddressName string) (*string, error) {

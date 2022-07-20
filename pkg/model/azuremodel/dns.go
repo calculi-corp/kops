@@ -53,7 +53,7 @@ func (b *DNSModelBuilder) Build(c *fi.ModelBuilderContext) error {
 
 			VirtualNetworkName: fi.String(b.NameForVirtualNetwork()),
 			Shared:             fi.Bool(len(b.Cluster.Spec.DNSZone) > 0),
-			Tags:               map[string]*string{},
+			Tags:               b.CloudTags(b.NameForDNSZone()),
 			Private:            to.BoolPtr(private),
 		}
 

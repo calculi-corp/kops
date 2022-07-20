@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/kops/pkg/apis/kops"
 	"k8s.io/kops/pkg/model"
 	nodeidentityazure "k8s.io/kops/pkg/nodeidentity/azure"
@@ -149,4 +150,20 @@ func (c *AzureModelContext) CloudTagsForInstanceGroup(ig *kops.InstanceGroup) ma
 		m[strings.ReplaceAll(k, "/", "_")] = fi.String(v)
 	}
 	return m
+}
+
+// CloudTags computes the tags to apply to a normal cloud resource with the specified name
+func (b *AzureModelContext) CloudTags(name string) map[string]*string {
+	tags := make(map[string]*string)
+
+	if name != "" {
+		tags["Name"] = to.StringPtr(name)
+	}
+
+	tags["kubernetes.io_cluster_"+b.Cluster.ObjectMeta.Name] = to.StringPtr("owned")
+	for k, v := range b.Cluster.Spec.CloudLabels {
+		tags[k] = to.StringPtr(v)
+	}
+
+	return tags
 }

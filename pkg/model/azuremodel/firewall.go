@@ -231,26 +231,26 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 		nsgBaseGroup = &azuretasks.NetworkSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Network Security group for masters"),
-			Tags:        map[string]*string{},
+			Tags:        b.CloudTags(name),
 		}
 
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Application Security group for masters"),
-			Tags:        map[string]*string{},
+			Tags:        b.CloudTags(name),
 		}
 	} else if role == kops.InstanceGroupRoleNode {
 		name := b.SecurityGroupName(role)
 		nsgBaseGroup = &azuretasks.NetworkSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Network Security group for nodes"),
-			Tags:        map[string]*string{},
+			Tags:        b.CloudTags(name),
 		}
 
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Application Security group for nodes"),
-			Tags:        map[string]*string{},
+			Tags:        b.CloudTags(name),
 		}
 	} else if role == kops.InstanceGroupRoleBastion {
 		name := b.SecurityGroupName(role)
@@ -262,7 +262,7 @@ func (b *AzureModelContext) GetSecurityGroups(role kops.InstanceGroupRole) ([]Ne
 		asgBaseGroup = &azuretasks.ApplicationSecurityGroup{
 			Name:        fi.String(name),
 			Description: fi.String("Application Security group for bastion"),
-			Tags:        map[string]*string{},
+			Tags:        b.CloudTags(name),
 		}
 	} else {
 		return nil, nil, fmt.Errorf("not a supported security group type")

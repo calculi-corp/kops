@@ -53,7 +53,7 @@ func (b *APILoadBalancerModelBuilder) Build(c *fi.ModelBuilderContext) error {
 		Name:          fi.String(b.NameForLoadBalancer()),
 		Lifecycle:     b.Lifecycle,
 		ResourceGroup: b.LinkToResourceGroup(),
-		Tags:          map[string]*string{},
+		Tags:          b.CloudTags(b.NameForLoadBalancer()),
 	}
 
 	switch lbSpec.Type {
@@ -72,7 +72,7 @@ func (b *APILoadBalancerModelBuilder) Build(c *fi.ModelBuilderContext) error {
 			Name:          fi.String(b.NameForLoadBalancer()),
 			Lifecycle:     b.Lifecycle,
 			ResourceGroup: b.LinkToResourceGroup(),
-			Tags:          map[string]*string{},
+			Tags:          b.CloudTags(b.NameForLoadBalancer()),
 		}
 		c.AddTask(p)
 	default:

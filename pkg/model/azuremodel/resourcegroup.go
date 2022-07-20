@@ -34,7 +34,7 @@ func (b *ResourceGroupModelBuilder) Build(c *fi.ModelBuilderContext) error {
 	t := &azuretasks.ResourceGroup{
 		Name:      fi.String(b.NameForResourceGroup()),
 		Lifecycle: b.Lifecycle,
-		Tags:      map[string]*string{},
+		Tags:      b.CloudTags(b.NameForResourceGroup()),
 		Shared:    fi.Bool(b.Cluster.IsSharedAzureResourceGroup()),
 	}
 	c.AddTask(t)

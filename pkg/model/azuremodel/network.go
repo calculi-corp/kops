@@ -37,7 +37,7 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 		Lifecycle:     b.Lifecycle,
 		ResourceGroup: b.LinkToResourceGroup(),
 		CIDR:          fi.String(b.Cluster.Spec.NetworkCIDR),
-		Tags:          map[string]*string{},
+		Tags:          b.CloudTags(b.NameForVirtualNetwork()),
 		Shared:        fi.Bool(b.Cluster.SharedVPC()),
 	}
 
@@ -65,7 +65,7 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 			Name:          fi.String(b.NameForRouteTable()),
 			Lifecycle:     b.Lifecycle,
 			ResourceGroup: b.LinkToResourceGroup(),
-			Tags:          map[string]*string{},
+			Tags:          b.CloudTags(b.NameForRouteTable()),
 			Shared:        fi.Bool(b.Cluster.IsSharedAzureRouteTable()),
 		}
 

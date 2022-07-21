@@ -96,9 +96,16 @@ func (c *AzureModelContext) NameForLoadBalancer() string {
 }
 
 func (c *AzureModelContext) NameForRecordSet() string {
+	var fqRecordName string
+
+	fqRecordName = c.Cluster.Spec.MasterPublicName
+	if c.UsePrivateDNS() {
+		fqRecordName = c.Cluster.Spec.MasterInternalName
+	}
+
 	replacer := fmt.Sprintf(".%s.*", c.NameForDNSZone())
 	re := regexp.MustCompile(replacer)
-	return re.ReplaceAllString(c.ClusterName(), "")
+	return re.ReplaceAllString(fqRecordName, "")
 }
 
 // CloudTagsForInstanceGroup computes the tags to apply to instances in the specified InstanceGroup

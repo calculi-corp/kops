@@ -201,8 +201,8 @@ func (*LoadBalancer) RenderAzure(t *azure.AzureAPITarget, a, e, changes *LoadBal
 					Name: to.StringPtr("SSH_to_master_port_22"),
 					InboundNatRulePropertiesFormat: &network.InboundNatRulePropertiesFormat{
 						FrontendPortRangeStart: to.Int32Ptr(22),
-						FrontendPortRangeEnd: to.Int32Ptr(22),
-						BackendPort:  to.Int32Ptr(22),
+						FrontendPortRangeEnd:   to.Int32Ptr(22),
+						BackendPort:            to.Int32Ptr(22),
 						FrontendIPConfiguration: &network.SubResource{
 							ID: to.StringPtr(fmt.Sprintf("/%s/loadbalancers/%s/frontendIPConfigurations/%s", idPrefix, *e.Name, *to.StringPtr("LoadBalancerFrontEnd"))),
 						},

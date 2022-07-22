@@ -93,7 +93,7 @@ func TestLoadBalancerFind(t *testing.T) {
 	}
 
 	feConfigProperties := &network.FrontendIPConfigurationPropertiesFormat{
-		PrivateIPAllocationMethod: network.Dynamic,
+		PrivateIPAllocationMethod: network.IPAllocationMethodDynamic,
 		Subnet: &network.Subnet{
 			Name: to.StringPtr("subnet"),
 			ID:   to.StringPtr("id"),

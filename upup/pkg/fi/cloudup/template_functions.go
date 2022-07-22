@@ -174,6 +174,23 @@ func (tf *TemplateFunctions) AddTo(dest template.FuncMap, secretStore fi.SecretS
 		return os.Getenv("HCLOUD_TOKEN")
 	}
 
+	// Azure
+	dest["AZURE_RESOURCEGROUP_NAME"] = func() string {
+		return os.Getenv("AZURE_RESOURCEGROUP_NAME")
+	}
+	dest["AZURE_SUBSCRIPTION_ID"] = func() string {
+		return os.Getenv("AZURE_SUBSCRIPTION_ID")
+	}
+	dest["AZURE_TENANT_ID"] = func() string {
+		return os.Getenv("AZURE_TENANT_ID")
+	}
+	dest["AZURE_CLIENT_ID"] = func() string {
+		return os.Getenv("AZURE_CLIENT_ID")
+	}
+	dest["AZURE_CLIENT_SECRET"] = func() string {
+		return os.Getenv("AZURE_CLIENT_SECRET")
+	}
+
 	if featureflag.Spotinst.Enabled() {
 		if creds, err := spotinst.LoadCredentials(); err == nil {
 			dest["SpotinstToken"] = func() string { return creds.Token }

@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/klog/v2"
 	"k8s.io/kops/upup/pkg/fi"
@@ -141,7 +141,7 @@ func (*LoadBalancer) RenderAzure(t *azure.AzureAPITarget, a, e, changes *LoadBal
 			ID: to.StringPtr(fmt.Sprintf("/%s/publicIPAddresses/%s", idPrefix, *e.Name)),
 		}
 	} else {
-		feConfigProperties.PrivateIPAllocationMethod = network.Dynamic
+		feConfigProperties.PrivateIPAllocationMethod = network.IPAllocationMethodDynamic
 		feConfigProperties.Subnet = &network.Subnet{
 			ID: to.StringPtr(fmt.Sprintf("/%s/virtualNetworks/%s/subnets/%s", idPrefix, *e.Subnet.VirtualNetwork.Name, *e.Subnet.Name)),
 		}
@@ -192,6 +192,23 @@ func (*LoadBalancer) RenderAzure(t *azure.AzureAPITarget, a, e, changes *LoadBal
 						},
 						Probe: &network.SubResource{
 							ID: to.StringPtr(fmt.Sprintf("/%s/loadbalancers/%s/probes/%s", idPrefix, *e.Name, *to.StringPtr("Health-TCP-443"))),
+						},
+					},
+				},
+			},
+			InboundNatRules: &[]network.InboundNatRule{
+				{
+					Name: to.StringPtr("SSH_to_master_port_22"),
+					InboundNatRulePropertiesFormat: &network.InboundNatRulePropertiesFormat{
+						FrontendPortRangeStart: to.Int32Ptr(22),
+						FrontendPortRangeEnd: to.Int32Ptr(22),
+						BackendPort:  to.Int32Ptr(22),
+						FrontendIPConfiguration: &network.SubResource{
+							ID: to.StringPtr(fmt.Sprintf("/%s/loadbalancers/%s/frontendIPConfigurations/%s", idPrefix, *e.Name, *to.StringPtr("LoadBalancerFrontEnd"))),
+						},
+						Protocol: network.TransportProtocolTCP,
+						BackendAddressPool: &network.SubResource{
+							ID: to.StringPtr(fmt.Sprintf("/%s/loadbalancers/%s/backendAddressPools/%s", idPrefix, *e.Name, *to.StringPtr("LoadBalancerBackEnd"))),
 						},
 					},
 				},

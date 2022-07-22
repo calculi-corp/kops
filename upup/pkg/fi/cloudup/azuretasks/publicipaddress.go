@@ -19,7 +19,7 @@ package azuretasks
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/klog/v2"
 	"k8s.io/kops/upup/pkg/fi"
@@ -113,8 +113,8 @@ func (*PublicIPAddress) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Publ
 		Location: to.StringPtr(t.Cloud.Region()),
 		Name:     e.Name,
 		PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
-			PublicIPAddressVersion:   network.IPv4,
-			PublicIPAllocationMethod: network.Static,
+			PublicIPAddressVersion:   network.IPVersionIPv4,
+			PublicIPAllocationMethod: network.IPAllocationMethodStatic,
 		},
 		Tags: e.Tags,
 	}

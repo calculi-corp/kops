@@ -22,7 +22,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-06-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/azure"
@@ -88,8 +88,8 @@ func TestPublicIPAddressFind(t *testing.T) {
 		Location: to.StringPtr("eastus"),
 		Name:     to.StringPtr("publicIPAddress"),
 		PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
-			PublicIPAddressVersion:   network.IPv4,
-			PublicIPAllocationMethod: network.Dynamic,
+			PublicIPAddressVersion:   network.IPVersionIPv4,
+			PublicIPAllocationMethod: network.IPAllocationMethodDynamic,
 		},
 	}
 	if err := cloud.PublicIPAddress().CreateOrUpdate(context.Background(), *rg.Name, *publicIPAddress.Name, publicIPAddressParameters); err != nil {

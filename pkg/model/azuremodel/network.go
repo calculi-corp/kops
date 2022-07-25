@@ -59,8 +59,7 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 
 	// If route table name is provided (--azure-route-table-name <name>) we assume that it is exists,
 	// so we only add subnets associations
-	if !b.Cluster.IsSharedAzureRouteTable() && !b.Cluster.SharedVPC() {
-
+	if !b.Cluster.IsSharedAzureRouteTable() {
 		rtTask := &azuretasks.RouteTable{
 			Name:          fi.String(b.NameForRouteTable()),
 			Lifecycle:     b.Lifecycle,

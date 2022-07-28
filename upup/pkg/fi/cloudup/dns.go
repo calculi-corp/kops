@@ -218,7 +218,6 @@ func precreateDNS(ctx context.Context, cluster *kops.Cluster, cloud fi.Cloud) er
 			ip = PlaceholderIPv6
 		}
 		klog.V(2).Infof("Pre-creating DNS record %s => %s", recordKey, ip)
-
 		if !foundAddress {
 			if cloud.ProviderID() == kops.CloudProviderDO {
 				changeset.Add(rrs.New(recordKey.hostname, []string{ip}, PlaceholderTTLDigitialOcean, recordKey.rrsType))

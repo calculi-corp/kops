@@ -35,9 +35,9 @@ type ResourceRecordSet struct {
 
 func (r ResourceRecordSet) Name() string {
 	if r.zoneType == PublicZoneType {
-		return *r.publicimpl.Name
+		return *r.publicimpl.Name + "." + r.recordSets.zone.Name()
 	}
-	return *r.privateimpl.Name
+	return *r.privateimpl.Name + "." + r.recordSets.zone.Name()
 }
 
 func (r ResourceRecordSet) Rrdatas() []string {

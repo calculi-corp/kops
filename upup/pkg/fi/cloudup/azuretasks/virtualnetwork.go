@@ -125,6 +125,10 @@ func (*VirtualNetwork) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Virtu
 			return nil
 		}
 		klog.Infof("Updating a Virtual Network with name: %s", fi.StringValue(e.Name))
+		// PS::
+		for _, s := range *e.Subnets {
+			klog.Infof("PS:: Found subnet: %v\n", *s.Name)
+		}
 	}
 
 	vnet := network.VirtualNetwork{

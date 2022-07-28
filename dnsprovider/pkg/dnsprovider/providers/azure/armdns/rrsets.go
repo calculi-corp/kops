@@ -22,6 +22,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
+	"k8s.io/klog/v2"
 	"k8s.io/kops/dnsprovider/pkg/dnsprovider"
 	"k8s.io/kops/dnsprovider/pkg/dnsprovider/rrstype"
 )
@@ -39,6 +40,7 @@ func (rrsets ResourceRecordSets) List() ([]dnsprovider.ResourceRecordSet, error)
 	var ctx = context.TODO()
 
 	if rrsets.zone.zoneType == PublicZoneType { // list public record sets
+		klog.Infof("PS:: Listing records in zone: %v, and resource group: %v\n", rrsets.zone.Name(), os.Getenv("AZURE_RESOURCEGROUP_NAME"))
 		pager := rrsets.publicRecordSetClient.NewListAllByDNSZonePager(os.Getenv("AZURE_RESOURCEGROUP_NAME"), rrsets.zone.Name(), &armdns.RecordSetsClientListAllByDNSZoneOptions{})
 		for pager.More() {
 			nextResult, err := pager.NextPage(ctx)
@@ -46,6 +48,7 @@ func (rrsets ResourceRecordSets) List() ([]dnsprovider.ResourceRecordSet, error)
 				return nil, err
 			}
 			for _, v := range nextResult.Value {
+				klog.Infof("PS:: Found record set: %v\n", *v.Name)
 				r := &ResourceRecordSet{
 					publicimpl: *v,
 					zoneType:   PublicZoneType,

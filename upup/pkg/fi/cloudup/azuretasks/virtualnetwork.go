@@ -45,6 +45,11 @@ var (
 	_ fi.CompareWithID = &VirtualNetwork{}
 )
 
+// GetDependencies returns a slice of tasks on which the tasks depends on.
+func (p *VirtualNetwork) GetDependencies(tasks map[string]fi.Task) []fi.Task {
+	return nil
+}
+
 // CompareWithID returns the Name of the VM Scale Set.
 func (n *VirtualNetwork) CompareWithID() *string {
 	return n.Name
@@ -125,10 +130,6 @@ func (*VirtualNetwork) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Virtu
 			return nil
 		}
 		klog.Infof("Updating a Virtual Network with name: %s", fi.StringValue(e.Name))
-		// PS::
-		for _, s := range *e.Subnets {
-			klog.Infof("PS:: Found subnet: %v\n", *s.Name)
-		}
 	}
 
 	vnet := network.VirtualNetwork{

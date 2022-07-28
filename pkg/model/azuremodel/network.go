@@ -17,6 +17,7 @@ limitations under the License.
 package azuremodel
 
 import (
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-08-01/network"
 	"k8s.io/kops/pkg/apis/kops"
 	"k8s.io/kops/upup/pkg/fi"
 	"k8s.io/kops/upup/pkg/fi/cloudup/azuretasks"
@@ -32,16 +33,7 @@ var _ fi.ModelBuilder = &NetworkModelBuilder{}
 
 // Build builds tasks for creating a virtual network and subnets.
 func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
-	networkTask := &azuretasks.VirtualNetwork{
-		Name:          fi.String(b.NameForVirtualNetwork()),
-		Lifecycle:     b.Lifecycle,
-		ResourceGroup: b.LinkToResourceGroup(),
-		CIDR:          fi.String(b.Cluster.Spec.NetworkCIDR),
-		Tags:          b.CloudTags(b.NameForVirtualNetwork()),
-		Shared:        fi.Bool(b.Cluster.SharedVPC()),
-	}
-
-	c.AddTask(networkTask)
+	var subnetsForVirtualNetwork = []network.Subnet{}
 
 	for _, subnetSpec := range b.Cluster.Spec.Subnets {
 		subnetTask := &azuretasks.Subnet{
@@ -54,8 +46,26 @@ func (b *NetworkModelBuilder) Build(c *fi.ModelBuilderContext) error {
 			RouteTable:           fi.String(b.NameForRouteTable()),
 			NetworkSecurityGroup: fi.String(b.SecurityGroupName(kops.InstanceGroupRoleMaster)),
 		}
+		subnetsForVirtualNetwork = append(subnetsForVirtualNetwork, network.Subnet{
+			Name: fi.String(b.NameForSubnet(&subnetSpec)),
+			SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
+				AddressPrefix: fi.String(subnetSpec.CIDR),
+			},
+		})
 		c.AddTask(subnetTask)
 	}
+
+	networkTask := &azuretasks.VirtualNetwork{
+		Name:          fi.String(b.NameForVirtualNetwork()),
+		Lifecycle:     b.Lifecycle,
+		ResourceGroup: b.LinkToResourceGroup(),
+		CIDR:          fi.String(b.Cluster.Spec.NetworkCIDR),
+		Tags:          b.CloudTags(b.NameForVirtualNetwork()),
+		Shared:        fi.Bool(b.Cluster.SharedVPC()),
+		Subnets:       &subnetsForVirtualNetwork,
+	}
+
+	c.AddTask(networkTask)
 
 	// If route table name is provided (--azure-route-table-name <name>) we assume that it is exists,
 	// so we only add subnets associations

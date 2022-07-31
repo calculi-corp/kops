@@ -132,11 +132,6 @@ func (*Subnet) CheckChanges(a, e, changes *Subnet) error {
 
 // RenderAzure creates or updates a subnet.
 func (*Subnet) RenderAzure(t *azure.AzureAPITarget, a, e, changes *Subnet) error {
-	if e.Shared != nil && *e.Shared {
-		klog.Infof("Shared subnet: %s - skipping create or update", fi.StringValue(e.Name))
-		return nil
-	}
-
 	if a == nil {
 		klog.Infof("Creating a new Subnet with name: %s", fi.StringValue(e.Name))
 	} else {

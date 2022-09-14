@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM debian:bullseye-20220527
+FROM debian:11.5
 # ^ Cannot be Alpine since it does not support systemctl
 # ^ Systemctl is used to restart kubelet upon successful run of run.sh
 
